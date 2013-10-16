@@ -13,7 +13,6 @@ public class Chunk : MonoBehaviour
 	public Vector3 center;
 	public Position3 chunkPosition;
 	MeshFilter meshFilter;
-	MeshRenderer meshRenderer;
 	MeshCollider meshCollider;
 	byte[,,] blocks;
 
@@ -35,23 +34,15 @@ public class Chunk : MonoBehaviour
 
 	void Start()
 	{
+
 		center = transform.position + Vector3.one * size;
 		chunkPosition = new Position3( transform.position );
-		blocks = new byte[ size, size, size];
+		blocks = new byte[ size, size, size ];
 		meshFilter = GetComponent< MeshFilter >();
-		meshRenderer = GetComponent< MeshRenderer >();
 		meshCollider = GetComponent< MeshCollider >();
 
 		generateBlocks();
-
-		if ( blocks == null )
-		{
-			meshRenderer.enabled = false;
-		}
-		else
-		{
-			generateMesh();
-		}
+		generateMesh();
 
 		terrain.chunks.Add( chunkPosition, this );
 	}
@@ -82,7 +73,7 @@ public class Chunk : MonoBehaviour
 
 		if ( triangles.Count == 0 )
 		{
-			meshRenderer.enabled = false;
+			renderer.enabled = false;
 		}
 		else
 		{
@@ -97,7 +88,7 @@ public class Chunk : MonoBehaviour
 			meshFilter.mesh = mesh;
 			meshCollider.sharedMesh = mesh;
 
-			meshRenderer.enabled = true;
+			renderer.enabled = true;
 		}
 	}
 
