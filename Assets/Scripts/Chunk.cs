@@ -26,22 +26,38 @@ public class Chunk : MonoBehaviour
 
 	public Block.Type getBlock( Position3 blockPosition )
 	{
-		if ( (blockPosition.x < 0) || (blockPosition.x >= size) || (blockPosition.y < 0) || (blockPosition.y >= size) || (blockPosition.z < 0) || (blockPosition.z >= size) )
-		{
-			Debug.LogWarning( "Requested brick outside of the block!" );
-
-			Debug.Break();
-
-			return Block.Type.undefined;
-		}
-
-		return blocks[ blockPosition.x, blockPosition.y, blockPosition.z ];
+		return getBlock( blockPosition.x, blockPosition.y, blockPosition.z );
 	}
 
 
 	public Block.Type getBlock( int x, int y, int z )
 	{
-		return getBlock( new Position3( x, y, z ) );
+		if ( x < 0 )
+		{
+			return neighbourLeft.getBlock( x + size, y, z );
+		}
+		if ( x >= size )
+		{
+			return neighbourRight.getBlock( x - size, y, z );
+		}
+		if ( y < 0 )
+		{
+			return neighbourDown.getBlock( x, y + size, z );
+		}
+		if ( y >= size )
+		{
+			return neighbourUp.getBlock( x, y - size, z );
+		}
+		if ( z < 0 )
+		{
+			return neighbourBack.getBlock( x, y, z + size );
+		} 
+		if ( z >= size )
+		{
+			return neighbourForward.getBlock( x, y, z - size );
+		}
+
+		return blocks[ x, y, z ];
 	}
 
 
@@ -80,11 +96,11 @@ public class Chunk : MonoBehaviour
 
 		var blocksTemp = new Block.Type[ size, size, size ];
 
-		for ( int x = 1; x < size - 1; ++x )
+		for ( int x = 0; x < size; ++x )
 		{
-			for ( int y = 1; y < size - 1; ++y )
+			for ( int y = 0; y < size; ++y )
 			{
-				for ( int z = 1; z < size - 1; ++z )
+				for ( int z = 0; z < size; ++z )
 				{
 //					blocksTemp[ x, y, z ] = (UnityEngine.Random.value > 0.5f) ? Block.Type.dirt : Block.Type.air;
 					blocksTemp[ x, y, z ] = Mathf.Sin( (position.x * size + x + position.z * size + z) / 20f ) * 5f > (position.y * size + y) ? Block.Type.dirt : Block.Type.air;
