@@ -82,6 +82,6 @@ public struct Position3
 
 	public override int GetHashCode()
 	{
-		return x * 5 + y * 7 + z * 13;
+		return x * 197 + y * 211 + z * 227;
 	}
 }

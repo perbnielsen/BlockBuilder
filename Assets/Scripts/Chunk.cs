@@ -92,7 +92,7 @@ public class Chunk : MonoBehaviour
 
 	public void generateBlocks()
 	{
-		Debug.Log( "Generating blocks for chunk at " + position + " on frame " + Time.frameCount );
+//		Debug.Log( "Generating blocks for chunk at " + position + " on frame " + Time.frameCount );
 
 		var blocksTemp = new Block.Type[ size, size, size ];
 
@@ -103,8 +103,8 @@ public class Chunk : MonoBehaviour
 				for ( int z = 0; z < size; ++z )
 				{
 //					blocksTemp[ x, y, z ] = (UnityEngine.Random.value > 0.5f) ? Block.Type.dirt : Block.Type.air;
-					blocksTemp[ x, y, z ] = Mathf.Sin( (position.x * size + x + position.z * size + z) / 20f ) * 5f > (position.y * size + y) ? Block.Type.dirt : Block.Type.air;
-//					blocksTemp[ x, y, z ] = Noise.Generate( position.x * size + x, position.y * size + y ) > (position.y * size + y) ? Block.Type.dirt : Block.Type.air;
+//					blocksTemp[ x, y, z ] = Mathf.Sin( (position.x * size + x + position.z * size + z) / 20f ) * 5f > (position.y * size + y) ? Block.Type.dirt : Block.Type.air;
+					blocksTemp[ x, y, z ] = SimplexNoise.Noise.Generate( (float)(position.x * size + x) / 10000f, (float)(position.z * size + z) / 10000f ) > (float)(position.y * size + y) / 1000f ? Block.Type.dirt : Block.Type.air;
 				}
 			}
 		}
@@ -115,9 +115,9 @@ public class Chunk : MonoBehaviour
 
 	void disableMesh()
 	{
-		renderer.enabled = true;
+		renderer.enabled = false;
 
-		renderer.material.color = new Color( 12f / 256f, 154f / 256f, 92f / 256f, 13f / 256f );
+//		renderer.material.color = new Color( 12f / 256f, 154f / 256f, 92f / 256f, 13f / 256f );
 
 		hasMesh = false;
 	}
@@ -127,7 +127,7 @@ public class Chunk : MonoBehaviour
 	{
 		if ( hasMesh && !regenerate ) return;
 
-		Debug.Log( "Generating mesh for chunk at " + position + " on frame " + Time.frameCount );
+//		Debug.Log( "Generating mesh for chunk at " + position + " on frame " + Time.frameCount );
 
 		generateNeighbours();
 
@@ -155,8 +155,6 @@ public class Chunk : MonoBehaviour
 			meshCollider.sharedMesh = mesh;
 
 			renderer.enabled = true;
-
-			renderer.material.color = Color.green;
 		}
 		
 		hasMesh = true;

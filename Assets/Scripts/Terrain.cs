@@ -10,7 +10,7 @@ public class Terrain : MonoBehaviour
 	public int chunkSize;
 	//	public float preloadChunksDistance;
 	public float displayChunkDistance;
-	public float destroyChunkDistance;
+	//	public float destroyChunkDistance;
 	[NonSerializedAttribute]
 	public float displayChunkDistanceSqr;
 	[NonSerializedAttribute]
@@ -23,7 +23,7 @@ public class Terrain : MonoBehaviour
 	{
 		if ( !chunks.ContainsKey( position ) )
 		{
-			Debug.Log( "Did not find chunk at " + position + ". Creating it on frame " + Time.frameCount );
+//			Debug.Log( "Did not find chunk at " + position + ". Creating it on frame " + Time.frameCount );
 			
 			var chunk = (Chunk)Instantiate( chunkPrefab, position * chunkSize, Quaternion.identity );
 
@@ -45,7 +45,7 @@ public class Terrain : MonoBehaviour
 //		UnityEnigne.Random.seed = seed;
 
 		displayChunkDistanceSqr = displayChunkDistance * displayChunkDistance;
-		destroyChunkDistanceSqr = destroyChunkDistance * destroyChunkDistance;
+		destroyChunkDistanceSqr = (displayChunkDistance + chunkSize) * (displayChunkDistance + chunkSize);
 
 	}
 
