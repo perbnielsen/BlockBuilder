@@ -1,90 +1,57 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System;
 
 
 public class Terrain : MonoBehaviour
 {
+	public Transform player;
 	public int seed;
 	public int chunkSize;
-	public int viewDistance;
+	//	public float preloadChunksDistance;
+	public float displayChunkDistance;
+	public float destroyChunkDistance;
+	[NonSerializedAttribute]
+	public float displayChunkDistanceSqr;
+	[NonSerializedAttribute]
+	public float destroyChunkDistanceSqr;
 	public Dictionary< Position3, Chunk > chunks = new Dictionary< Position3, Chunk >();
 	public Chunk chunkPrefab;
 
 
-	public byte getBlock( Position3 blockPosition )
+	public Chunk getChunk( Position3 position )
 	{
-		Position3 chunkPosition = blockPosition / chunkSize;
-
-		blockPosition %= chunkSize;
-
-		if ( blockPosition.x < 0 )
+		if ( !chunks.ContainsKey( position ) )
 		{
-			chunkPosition.x -= 1;
-			blockPosition.x += chunkSize;
-		}
-		if ( blockPosition.y < 0 )
-		{
-			chunkPosition.y -= 1;
-			blockPosition.y += chunkSize;
-		}
-		if ( blockPosition.z < 0 )
-		{
-			chunkPosition.z -= 1;
-			blockPosition.z += chunkSize;
-		}
-		return getBlock( chunkPosition, blockPosition );
-	}
+			Debug.Log( "Did not find chunk at " + position + ". Creating it on frame " + Time.frameCount );
+			
+			var chunk = (Chunk)Instantiate( chunkPrefab, position * chunkSize, Quaternion.identity );
 
-
-	public byte getBlock( Position3 chunk, Position3 position )
-	{
-//		Debug.Log( "GetBlock( (" + chunk.x + ", " + chunk.y + ", " + chunk.z + "), (" + position.x + ", " + position.y + ", " + position.z + " )" );
-
-		if ( chunks.ContainsKey( chunk ) )
-		{
-			return chunks[ chunk ].getBlock( position );
+			chunk.transform.parent = transform;
+			chunk.terrain = this;
+			chunk.size = chunkSize;
+			chunk.position = position;
+			chunk.generateBlocks();
+			
+			chunks.Add( position, chunk );
 		}
 
-		return 255;
+		return chunks[ position ];
 	}
 
 
 	void Start()
 	{
-		Random.seed = seed;
+//		UnityEnigne.Random.seed = seed;
+
+		displayChunkDistanceSqr = displayChunkDistance * displayChunkDistance;
+		destroyChunkDistanceSqr = destroyChunkDistance * destroyChunkDistance;
+
 	}
 
 
 	void Update()
 	{
-		if ( chunkSize == 0 )
-		{
-			Debug.LogWarning( "ChunkSize on terrain " + name + " is zero. Defaulting to 16" );
-
-			chunkSize = 16;
-		}
-
-		Position3 playerChunk = new Position3( transform.position / chunkSize ) * chunkSize;
-
-		for ( int x = -viewDistance; x < viewDistance; x += chunkSize )
-		{
-			for ( int y = -viewDistance; y < viewDistance; y += chunkSize )
-			{
-				for ( int z = -viewDistance; z < viewDistance; z += chunkSize )
-				{
-					Position3 position = playerChunk + new Position3( x, y, z );
-
-					if ( (new Vector3( x, y, z ) - transform.position).magnitude > viewDistance ) continue;
-
-					if ( !chunks.ContainsKey( position ) )
-					{
-						var chunk = (Chunk)Instantiate( chunkPrefab, position.toVector3(), Quaternion.identity );
-
-						chunk.terrain = this;
-						chunk.size = chunkSize;
-					}
-				}
-			}
-		}
+		getChunk( player.transform.position / chunkSize );
 	}
 }
