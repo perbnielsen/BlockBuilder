@@ -104,7 +104,7 @@ public class Chunk : MonoBehaviour
 				{
 //					blocksTemp[ x, y, z ] = (UnityEngine.Random.value > 0.5f) ? Block.Type.dirt : Block.Type.air;
 //					blocksTemp[ x, y, z ] = Mathf.Sin( (position.x * size + x + position.z * size + z) / 20f ) * 5f > (position.y * size + y) ? Block.Type.dirt : Block.Type.air;
-					blocksTemp[ x, y, z ] = SimplexNoise.Noise.Generate( (float)(position.x * size + x) / 10000f, (float)(position.z * size + z) / 10000f ) > (float)(position.y * size + y) / 1000f ? Block.Type.dirt : Block.Type.air;
+					blocksTemp[ x, y, z ] = SimplexNoise.Noise.Generate( (float)(position.x * size + x) / 10000f, (float)(position.z * size + z) / 10000f ) > (float)(position.y * size + y) / 500f ? Block.Type.dirt : Block.Type.air;
 				}
 			}
 		}

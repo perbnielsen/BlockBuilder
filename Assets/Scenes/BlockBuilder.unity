@@ -114,8 +114,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   player: {fileID: 354730897}
   seed: 0
-  chunkSize: 16
-  displayChunkDistance: 128
+  chunkSize: 48
+  displayChunkDistance: 256
   chunkPrefab: {fileID: 11400000, guid: 593ee089cdb3540b1a217913c94ad1f1, type: 2}
 --- !u!1 &354730893
 GameObject:
@@ -271,7 +271,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 728618782}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: .699999988, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 354730897}
@@ -385,7 +385,7 @@ Transform:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1221136858}
-  m_LocalRotation: {x: .408217937, y: -.234569728, z: .109381676, w: .875426054}
+  m_LocalRotation: {x: .570514381, y: .321545243, z: .321545243, w: .683908463}
   m_LocalPosition: {x: -19.4302731, y: .918343067, z: -28.8880672}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
