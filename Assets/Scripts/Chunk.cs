@@ -82,11 +82,7 @@ public class Chunk : MonoBehaviour
 			yield return null;
 		}
 
-//		Debug.Log( "Deleting chunk at " + position );
-
-		terrain.chunks.Remove( position );
-
-		Destroy( gameObject );
+		terrain.deleteChunk( this );
 	}
 
 
@@ -98,13 +94,17 @@ public class Chunk : MonoBehaviour
 
 		for ( int x = 0; x < size; ++x )
 		{
+			var positionX = (float)(position.x * size + x) / 100f;
+
 			for ( int y = 0; y < size; ++y )
 			{
+				var positionY = (float)(position.y * size + y) / 100f;
+
 				for ( int z = 0; z < size; ++z )
 				{
-//					blocksTemp[ x, y, z ] = (UnityEngine.Random.value > 0.5f) ? Block.Type.dirt : Block.Type.air;
-//					blocksTemp[ x, y, z ] = Mathf.Sin( (position.x * size + x + position.z * size + z) / 20f ) * 5f > (position.y * size + y) ? Block.Type.dirt : Block.Type.air;
-					blocksTemp[ x, y, z ] = SimplexNoise.Noise.Generate( (float)(position.x * size + x) / 100f, (float)(position.z * size + z) / 100f, (float)(position.y * size + y) / 100f ) < 0f ? Block.Type.dirt : Block.Type.air;
+					var positionZ = (float)(position.z * size + z) / 100f;
+
+					blocksTemp[ x, y, z ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < 0f ? Block.Type.dirt : Block.Type.air;
 				}
 			}
 		}

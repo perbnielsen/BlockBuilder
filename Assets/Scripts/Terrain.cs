@@ -27,10 +27,13 @@ public class Terrain : MonoBehaviour
 	public float displayChunkDistanceSqr;
 	[NonSerialized]
 	public float destroyChunkDistanceSqr;
-	public Dictionary< Position3, Chunk > chunks = new Dictionary< Position3, Chunk >();
 	public Chunk chunkPrefab;
+	readonly Dictionary< Position3, Chunk > chunks = new Dictionary< Position3, Chunk >();
 
 
+	/**
+	 * @return the chunk at position. If the chunk does not exist it will be created first
+	 */
 	public Chunk getChunk( Position3 position )
 	{
 		if ( !chunks.ContainsKey( position ) )
@@ -52,10 +55,18 @@ public class Terrain : MonoBehaviour
 	}
 
 
+	public void deleteChunk( Chunk chunk )
+	{
+//		Debug.Log( "Deleting chunk at " + chunk.position );
+
+		chunks.Remove( chunk.position );
+
+		Destroy( chunk.gameObject );
+	}
+
+
 	void Start()
 	{
-//		UnityEnigne.Random.seed = seed;
-
 		displayChunkDistance = 128;
 
 	}
