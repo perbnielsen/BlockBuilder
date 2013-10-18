@@ -115,7 +115,6 @@ MonoBehaviour:
   player: {fileID: 354730897}
   seed: 0
   chunkSize: 48
-  displayChunkDistance: 256
   chunkPrefab: {fileID: 11400000, guid: 593ee089cdb3540b1a217913c94ad1f1, type: 2}
 --- !u!1 &354730893
 GameObject:
