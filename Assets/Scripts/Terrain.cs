@@ -19,14 +19,14 @@ public class Terrain : MonoBehaviour
 		{
 			_displayChunkDistance = value;
 			displayChunkDistanceSqr = displayChunkDistance * displayChunkDistance;
-			destroyChunkDistanceSqr = (displayChunkDistance + chunkSize) * (displayChunkDistance + chunkSize);
+			disableChunkDistanceSqr = (displayChunkDistance + chunkSize * 1) * (displayChunkDistance + chunkSize * 1);
+			destroyChunkDistanceSqr = (displayChunkDistance + chunkSize * 2) * (displayChunkDistance + chunkSize * 2);
 		}
 	}
-
-
-	[NonSerialized]
+	//	[HideInInspector]
 	public float displayChunkDistanceSqr;
-	[NonSerialized]
+	//	[HideInInspector]
+	public float disableChunkDistanceSqr;
 	public float destroyChunkDistanceSqr;
 	public Chunk chunkPrefab;
 	readonly Dictionary< Position3, Chunk > chunks = new Dictionary< Position3, Chunk >();
@@ -35,12 +35,14 @@ public class Terrain : MonoBehaviour
 	/**
 	 * @return the chunk at position. If the chunk does not exist it will be created first
 	 */
-	public Chunk getChunk( Position3 position )
+	public Chunk getChunk( Position3 position, bool createIfNotFound = true )
 	{
 		if ( !chunks.ContainsKey( position ) )
 		{
-//			Debug.Log( "Did not find chunk at " + position + ". Creating it on frame " + Time.frameCount );
+			// Debug.Log( "Did not find chunk at " + position );
+			if ( !createIfNotFound ) return null;
 			
+			// Debug.Log( "Creating it on frame " + Time.frameCount );
 			var chunk = (Chunk)Instantiate( chunkPrefab, position * chunkSize, Quaternion.identity );
 
 			chunk.transform.parent = transform;
@@ -71,15 +73,25 @@ public class Terrain : MonoBehaviour
 		(new Thread( Chunk.backgroundTask )).Start();
 
 		displayChunkDistance = 128;
-
 	}
 
 
 	void Update()
 	{
-		if ( Input.GetKey( KeyCode.F1 ) ) displayChunkDistance -= 8;
-		if ( Input.GetKey( KeyCode.F2 ) ) displayChunkDistance += 8;
+		if ( Input.GetKey( KeyCode.F1 ) )
+		{
+			displayChunkDistance = Mathf.Max( chunkSize, 8 );
 
-		getChunk( player.transform.position / chunkSize );
+			Debug.Log( "displayChunkDistance: " + displayChunkDistance );
+		}
+
+		if ( Input.GetKey( KeyCode.F2 ) )
+		{
+			displayChunkDistance += 8;
+
+			Debug.Log( "displayChunkDistance: " + displayChunkDistance );
+		}
+
+		getChunk( (player.transform.position - Vector3.one * chunkSize * 0.5f) / chunkSize );
 	}
 }

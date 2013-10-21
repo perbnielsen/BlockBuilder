@@ -115,6 +115,9 @@ MonoBehaviour:
   player: {fileID: 354730897}
   seed: 0
   chunkSize: 32
+  displayChunkDistanceSqr: 0
+  disableChunkDistanceSqr: 0
+  destroyChunkDistanceSqr: 0
   chunkPrefab: {fileID: 11400000, guid: 593ee089cdb3540b1a217913c94ad1f1, type: 2}
 --- !u!1 &354730893
 GameObject:
@@ -156,7 +159,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 354730893}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 5, y: -25, z: 5}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 728618783}
@@ -173,7 +176,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   axes: 1
-  sensitivityX: 15
+  sensitivityX: 5
   sensitivityY: 0
   minimumX: -360
   maximumX: 360
@@ -227,10 +230,10 @@ MonoBehaviour:
     perpAmount: 0
     steepPerpAmount: .5
   movingPlatform:
-    enabled: 1
+    enabled: 0
     movementTransfer: 2
   sliding:
-    enabled: 1
+    enabled: 0
     slidingSpeed: 10
     sidewaysControl: 1
     speedControl: 1
@@ -321,8 +324,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   axes: 2
-  sensitivityX: 15
-  sensitivityY: 15
+  sensitivityX: 5
+  sensitivityY: 5
   minimumX: -360
   maximumX: 360
   minimumY: -60

@@ -103,30 +103,40 @@ public class Chunk : MonoBehaviour
 	}
 
 
-	IEnumerator Start()
+	void Start()
 	{
-		center = transform.position + Vector3.one * size;
+		center = transform.position + Vector3.one * size / 2f;
 		meshFilter = GetComponent< MeshFilter >();
 		meshCollider = GetComponent< MeshCollider >();
+	}
 
-		while ( blocks == null ) yield return null;
 
-		while ( (terrain.player.position - center).sqrMagnitude < terrain.destroyChunkDistanceSqr )
+	void Update()
+	{
+		if ( blocks == null ) return;
+
+		var distanceToPlayerSqr = (terrain.player.position - center).sqrMagnitude;
+
+		if ( distanceToPlayerSqr < terrain.displayChunkDistanceSqr )
 		{
-			if ( !hasMesh && !buildingMesh && (terrain.player.position - center).sqrMagnitude < terrain.displayChunkDistanceSqr )
-			{
-				StartCoroutine( generateMesh() );
-			}
+			generateNeighbours();
 
-			if ( hasMesh && (terrain.player.position - center).sqrMagnitude > terrain.displayChunkDistanceSqr + size )
-			{
-				disableMesh();
-			}
+			StartCoroutine( generateMesh() );
 
-			yield return null;
+			enabled = false;
 		}
+		
+		if ( distanceToPlayerSqr > terrain.disableChunkDistanceSqr )
+		{
+			disableMesh();
+		}
+		
+		if ( distanceToPlayerSqr > terrain.destroyChunkDistanceSqr )
+		{
+			activateNeighbours();
 
-		terrain.deleteChunk( this );
+			terrain.deleteChunk( this );
+		}
 	}
 
 
@@ -161,7 +171,7 @@ public class Chunk : MonoBehaviour
 	{
 		renderer.enabled = false;
 
-		hasMesh = false;
+//		hasMesh = false;
 	}
 
 
@@ -169,9 +179,20 @@ public class Chunk : MonoBehaviour
 	{
 //		Debug.Log( "Generating mesh for chunk at " + position + " on frame " + Time.frameCount );
 
-		buildingMesh = true;
 
-		generateNeighbours();
+		if ( buildingMesh )
+		{
+			Debug.LogError( "generating mesh more than once" );
+			yield break;
+		}
+
+		if ( hasMesh )
+		{
+			renderer.enabled = true;
+			yield break;
+		}
+
+		buildingMesh = true;
 
 		enqueueBackgroundTask( drawBlocks );
 
@@ -180,6 +201,7 @@ public class Chunk : MonoBehaviour
 		if ( triangles.Count == 0 )
 		{
 			renderer.enabled = false;
+			meshFilter.mesh = null;
 		}
 		else
 		{
@@ -205,12 +227,26 @@ public class Chunk : MonoBehaviour
 
 	void generateNeighbours()
 	{
-		neighbourRight = terrain.getChunk( position + Position3.right );
-		neighbourLeft = terrain.getChunk( position + Position3.left );
-		neighbourUp = terrain.getChunk( position + Position3.up );
-		neighbourDown = terrain.getChunk( position + Position3.down );
-		neighbourForward = terrain.getChunk( position + Position3.forward );
-		neighbourBack = terrain.getChunk( position + Position3.back );
+//		Debug.Log( "Generating neighbours for chunk at " + position + " on frame " + Time.frameCount );
+
+		if ( neighbourRight == null ) neighbourRight = terrain.getChunk( position + Position3.right );
+		if ( neighbourLeft == null ) neighbourLeft = terrain.getChunk( position + Position3.left );
+		if ( neighbourUp == null ) neighbourUp = terrain.getChunk( position + Position3.up );
+		if ( neighbourDown == null ) neighbourDown = terrain.getChunk( position + Position3.down );
+		if ( neighbourForward == null ) neighbourForward = terrain.getChunk( position + Position3.forward );
+		if ( neighbourBack == null ) neighbourBack = terrain.getChunk( position + Position3.back );
+	}
+
+
+	void activateNeighbours()
+	{
+
+		if ( neighbourRight != null || (neighbourRight = terrain.getChunk( position + Position3.right, false )) != null ) neighbourRight.enabled = true;
+		if ( neighbourLeft != null || (neighbourLeft = terrain.getChunk( position + Position3.left, false )) != null ) neighbourLeft.enabled = true;
+		if ( neighbourUp != null || (neighbourUp = terrain.getChunk( position + Position3.up, false )) != null ) neighbourUp.enabled = true;
+		if ( neighbourDown != null || (neighbourDown = terrain.getChunk( position + Position3.down, false )) != null ) neighbourDown.enabled = true;
+		if ( neighbourForward != null || (neighbourForward = terrain.getChunk( position + Position3.forward, false )) != null ) neighbourForward.enabled = true;
+		if ( neighbourBack != null || (neighbourBack = terrain.getChunk( position + Position3.back, false )) != null ) neighbourBack.enabled = true;
 	}
 
 
@@ -226,8 +262,8 @@ public class Chunk : MonoBehaviour
 
 					var origin = new Vector3( x, y, z );
 
-					// Front
-					if ( Block.isTransparent( getBlock( x, y, z - 1 ) ) ) drawFace( origin, Vector3.up, Vector3.right );
+					// Right
+					if ( Block.isTransparent( getBlock( x + 1, y, z ) ) ) drawFace( origin + Vector3.right, Vector3.up, Vector3.forward );
 
 					// Left
 					if ( Block.isTransparent( getBlock( x - 1, y, z ) ) ) drawFace( origin + Vector3.forward, Vector3.up, Vector3.back );
@@ -235,8 +271,8 @@ public class Chunk : MonoBehaviour
 					// Back
 					if ( Block.isTransparent( getBlock( x, y, z + 1 ) ) ) drawFace( origin + Vector3.forward + Vector3.right, Vector3.up, Vector3.left );
 
-					// Right
-					if ( Block.isTransparent( getBlock( x + 1, y, z ) ) ) drawFace( origin + Vector3.right, Vector3.up, Vector3.forward );
+					// Front
+					if ( Block.isTransparent( getBlock( x, y, z - 1 ) ) ) drawFace( origin, Vector3.up, Vector3.right );
 
 					// Top
 					if ( Block.isTransparent( getBlock( x, y + 1, z ) ) ) drawFace( origin + Vector3.up, Vector3.forward, Vector3.right );
