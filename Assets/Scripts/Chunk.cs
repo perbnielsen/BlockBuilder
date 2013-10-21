@@ -1,6 +1,8 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
+using System;
+using System.Threading;
 
 
 [RequireComponent( typeof( MeshFilter ) )]
@@ -16,12 +18,52 @@ public class Chunk : MonoBehaviour
 	MeshCollider meshCollider;
 	Block.Type[,,] blocks;
 	bool hasMesh;
+	bool buildingMesh;
 	Chunk neighbourRight;
 	Chunk neighbourLeft;
 	Chunk neighbourUp;
 	Chunk neighbourDown;
 	Chunk neighbourForward;
 	Chunk neighbourBack;
+	readonly List<Vector3> vertices = new List<Vector3>();
+	readonly List<int> triangles = new List<int>();
+	readonly List<Vector2> uvs = new List<Vector2>();
+
+
+	public delegate void Task();
+
+
+	public static Semaphore backgroundTasksCount = new Semaphore( 0, int.MaxValue );
+	public static readonly Queue< Task > backgroundTasks = new Queue<Task>();
+
+
+	public static void backgroundTask()
+	{
+		while ( true )
+		{
+			backgroundTasksCount.WaitOne();
+
+			Task task;
+
+			lock ( backgroundTasks )
+			{
+				task = backgroundTasks.Dequeue();
+			}
+
+			task();
+		}
+	}
+
+
+	public static void enqueueBackgroundTask( Task task )
+	{
+		lock ( backgroundTasks )
+		{
+			backgroundTasks.Enqueue( task );
+		}
+
+		backgroundTasksCount.Release();
+	}
 
 
 	public Block.Type getBlock( Position3 blockPosition )
@@ -67,11 +109,13 @@ public class Chunk : MonoBehaviour
 		meshFilter = GetComponent< MeshFilter >();
 		meshCollider = GetComponent< MeshCollider >();
 
+		while ( blocks == null ) yield return null;
+
 		while ( (terrain.player.position - center).sqrMagnitude < terrain.destroyChunkDistanceSqr )
 		{
-			if ( !hasMesh && (terrain.player.position - center).sqrMagnitude < terrain.displayChunkDistanceSqr )
+			if ( !hasMesh && !buildingMesh && (terrain.player.position - center).sqrMagnitude < terrain.displayChunkDistanceSqr )
 			{
-				generateMesh();
+				StartCoroutine( generateMesh() );
 			}
 
 			if ( hasMesh && (terrain.player.position - center).sqrMagnitude > terrain.displayChunkDistanceSqr + size )
@@ -117,25 +161,21 @@ public class Chunk : MonoBehaviour
 	{
 		renderer.enabled = false;
 
-//		renderer.material.color = new Color( 12f / 256f, 154f / 256f, 92f / 256f, 13f / 256f );
-
 		hasMesh = false;
 	}
 
 
-	void generateMesh( bool regenerate = false )
+	IEnumerator generateMesh()
 	{
-		if ( hasMesh && !regenerate ) return;
-
 //		Debug.Log( "Generating mesh for chunk at " + position + " on frame " + Time.frameCount );
+
+		buildingMesh = true;
 
 		generateNeighbours();
 
-		var vertices = new List<Vector3>();
-		var triangles = new List<int>();
-		var uvs = new List<Vector2>();
+		enqueueBackgroundTask( drawBlocks );
 
-		drawBlocks( vertices, triangles, uvs );
+		while ( !hasMesh ) yield return null;
 
 		if ( triangles.Count == 0 )
 		{
@@ -156,8 +196,10 @@ public class Chunk : MonoBehaviour
 
 			renderer.enabled = true;
 		}
-		
-		hasMesh = true;
+
+		vertices.Clear();
+		triangles.Clear();
+		uvs.Clear();
 	}
 
 
@@ -172,7 +214,7 @@ public class Chunk : MonoBehaviour
 	}
 
 
-	void drawBlocks( List< Vector3 > vertices, List< int > triangles, List< Vector2 > uvs )
+	void drawBlocks()
 	{
 		for ( int x = 0; x < size; ++x )
 		{
@@ -185,32 +227,32 @@ public class Chunk : MonoBehaviour
 					var origin = new Vector3( x, y, z );
 
 					// Front
-					if ( Block.isTransparent( getBlock( x, y, z - 1 ) ) ) drawFace( origin, Vector3.up, Vector3.right, vertices, triangles, uvs );
+					if ( Block.isTransparent( getBlock( x, y, z - 1 ) ) ) drawFace( origin, Vector3.up, Vector3.right );
 
 					// Left
-					if ( Block.isTransparent( getBlock( x - 1, y, z ) ) ) drawFace( origin + Vector3.forward, Vector3.up, Vector3.back, vertices, triangles, uvs );
+					if ( Block.isTransparent( getBlock( x - 1, y, z ) ) ) drawFace( origin + Vector3.forward, Vector3.up, Vector3.back );
 
 					// Back
-					if ( Block.isTransparent( getBlock( x, y, z + 1 ) ) ) drawFace( origin + Vector3.forward + Vector3.right, Vector3.up, Vector3.left, vertices, triangles, uvs );
+					if ( Block.isTransparent( getBlock( x, y, z + 1 ) ) ) drawFace( origin + Vector3.forward + Vector3.right, Vector3.up, Vector3.left );
 
 					// Right
-					if ( Block.isTransparent( getBlock( x + 1, y, z ) ) ) drawFace( origin + Vector3.right, Vector3.up, Vector3.forward, vertices, triangles, uvs );
+					if ( Block.isTransparent( getBlock( x + 1, y, z ) ) ) drawFace( origin + Vector3.right, Vector3.up, Vector3.forward );
 
 					// Top
-					if ( Block.isTransparent( getBlock( x, y + 1, z ) ) ) drawFace( origin + Vector3.up, Vector3.forward, Vector3.right, vertices, triangles, uvs );
+					if ( Block.isTransparent( getBlock( x, y + 1, z ) ) ) drawFace( origin + Vector3.up, Vector3.forward, Vector3.right );
 
 					// Bottom
-					if ( Block.isTransparent( getBlock( x, y - 1, z ) ) ) drawFace( origin, Vector3.right, Vector3.forward, vertices, triangles, uvs );
+					if ( Block.isTransparent( getBlock( x, y - 1, z ) ) ) drawFace( origin, Vector3.right, Vector3.forward );
 				}
 			}
 		}
+
+		buildingMesh = false;
+		hasMesh = true;
 	}
 
 
-	static void drawFace( Vector3 origin, Vector3 up, Vector3 right,
-	                      ICollection<Vector3> vertices,
-	                      ICollection<int> triangles,
-	                      ICollection<Vector2> uvs )
+	void drawFace( Vector3 origin, Vector3 up, Vector3 right )
 	{
 		int index = vertices.Count;
 

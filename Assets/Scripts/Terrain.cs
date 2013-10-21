@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System;
+using System.Threading;
 
 
 public class Terrain : MonoBehaviour
@@ -46,7 +47,7 @@ public class Terrain : MonoBehaviour
 			chunk.terrain = this;
 			chunk.size = chunkSize;
 			chunk.position = position;
-			chunk.generateBlocks();
+			Chunk.enqueueBackgroundTask( chunk.generateBlocks );
 			
 			chunks.Add( position, chunk );
 		}
@@ -67,6 +68,8 @@ public class Terrain : MonoBehaviour
 
 	void Start()
 	{
+		(new Thread( Chunk.backgroundTask )).Start();
+
 		displayChunkDistance = 128;
 
 	}
