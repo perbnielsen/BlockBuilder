@@ -163,7 +163,17 @@ public class Chunk : MonoBehaviour
 //					var positionZ = (float)(position.z * size + z) / 100f;
 
 //					blocksTemp[ x, y, z ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < 0f ? Block.Type.dirt : Block.Type.air;
-					blocksTemp[ x, y, z ] = ( 0 < x ) && ( x < 16 ) && ( 0 < y ) && ( y < 16 ) && ( 0 < z ) && ( z < 16 ) ? Block.Type.dirt : Block.Type.none;
+//					blocksTemp[ x, y, z ] = ( 0 < x ) && ( x < 16 ) && ( 0 < y ) && ( y < 16 ) && ( 0 < z ) && ( z < 16 ) ? Block.Type.dirt : Block.Type.none;
+
+					blocksTemp[ x, y, z ] = (
+					    ( ( x == 0 ) && ( y == 0 ) && ( z == 0 ) ) ||
+					    ( ( x == 1 ) && ( y == 0 ) && ( z == 0 ) ) ||
+					    ( ( x == 0 ) && ( y == 1 ) && ( z == 0 ) ) ||
+					    ( ( x == 0 ) && ( y == 2 ) && ( z == 0 ) ) ||
+					    ( ( x == 0 ) && ( y == 0 ) && ( z == 1 ) ) ||
+					    ( ( x == 0 ) && ( y == 0 ) && ( z == 2 ) ) ||
+					    ( ( x == 0 ) && ( y == 0 ) && ( z == 3 ) )
+					) ? Block.Type.dirt : Block.Type.none;
 				}
 			}
 		}
@@ -259,23 +269,14 @@ public class Chunk : MonoBehaviour
 	}
 
 
-	struct Size
-	{
-		public byte w;
-		public byte h;
-	}
-
-
 	void drawBlocks()
 	{
-		var right = new Size[size, size, size];
-//		var left = new Size[size, size, size];
-//		var up = new Size[size, size, size];
-//		var down = new Size[size, size, size];
-//		var forward = new Size[size, size, size];
-//		var back = new Size[size, size, size];
-
-		var faceSize = new Size { w = 1, h = 1 };
+		var right = new bool[size, size, size];
+		var left = new bool[size, size, size];
+		var up = new bool[size, size, size];
+		var down = new bool[size, size, size];
+		var forward = new bool[size, size, size];
+		var back = new bool[size, size, size];
 
 		for ( int x = 0; x < size; ++x )
 		{
@@ -284,172 +285,69 @@ public class Chunk : MonoBehaviour
 				for ( int z = 0; z < size; ++z )
 				{
 					if ( blocks[ x, y, z ] == 0 ) continue;
-					
-					if ( Block.isTransparent( getBlock( x + 1, y, z ) ) )
-					{
-						right[ x, y, z ] = faceSize;
-						Debug.Log( "Set " + x + ", " + y + ", " + z + " to " + right[ x, y, z ].w + ", " + right[ x, y, z ].h );
-					}
-//					if ( Block.isTransparent( getBlock( x - 1, y, z ) ) ) left[ x, y, z ] = faceSize;
-//					if ( Block.isTransparent( getBlock( x, y + 1, z ) ) ) up[ x, y, z ] = faceSize;
-//					if ( Block.isTransparent( getBlock( x, y - 1, z ) ) ) down[ x, y, z ] = faceSize;
-//					if ( Block.isTransparent( getBlock( x, y, z + 1 ) ) ) forward[ x, y, z ] = faceSize;
-//					if ( Block.isTransparent( getBlock( x, y, z - 1 ) ) ) back[ x, y, z ] = faceSize;
+
+					Debug.Log( "Block at (" + x + "," + y + "," + z + ")" );
+
+					if ( Block.isTransparent( getBlock( x + 1, y, z ) ) ) right[ x, y, z ] = true;
+					if ( Block.isTransparent( getBlock( x - 1, y, z ) ) ) left[ x, y, z ] = true;
+					if ( Block.isTransparent( getBlock( x, y + 1, z ) ) ) up[ x, y, z ] = true;
+					if ( Block.isTransparent( getBlock( x, y - 1, z ) ) ) down[ x, y, z ] = true;
+					if ( Block.isTransparent( getBlock( x, y, z + 1 ) ) ) forward[ x, y, z ] = true;
+					if ( Block.isTransparent( getBlock( x, y, z - 1 ) ) ) back[ x, y, z ] = true;
 				}
 			}
 		}
 
-//		Debug.Log( "rights facing faces: " + right.Count );
-//		printFaces( right );
-	
-//		right = optimizeFaces( right, Position3.up, Position3.forward, Position3.left );
-//		left = optimizeFaces( left, Position3.up, Position3.forward, Position3.left );
-//		up = optimizeFaces( up, Position3.forward, Position3.right, Position3.left );
-//		down = optimizeFaces( down, Position3.right, Position3.forward, Position3.left );
-//		forward = optimizeFaces( forward, Position3.up, Position3.right, Position3.left );
-//		back = optimizeFaces( back, Position3.up, Position3.right, Position3.left ); 
-
-//		Debug.Log( "rights facing faces optimized: " + right.Count );
-
-//		printFaces( right );
-
-		mergeFaces( ref right );
-
-
-		drawFaces( right, Vector3.right, Vector3.up, Vector3.forward );
-//		drawFaces( left, Vector3.forward, Vector3.up, Vector3.back );
-//		drawFaces( up, Vector3.up, Vector3.forward, Vector3.right );
-//		drawFaces( down, Vector3.zero, Vector3.right, Vector3.forward );
-//		drawFaces( forward, Vector3.forward + Vector3.right, Vector3.up, Vector3.left );
-//		drawFaces( back, Vector3.zero, Vector3.up, Vector3.right );
+		drawFaces( right, Vector3.right, Vector3.forward, Vector3.up );
+		drawFaces( left, Vector3.up, Vector3.forward, Vector3.down );
+		drawFaces( up, Vector3.up, Vector3.right, Vector3.forward );
+		drawFaces( down, Vector3.forward, Vector3.right, Vector3.back );
+		drawFaces( forward, Vector3.forward + Vector3.right, Vector3.left, Vector3.up );
+		drawFaces( back, Vector3.zero, Vector3.right, Vector3.up );
 
 		buildingMesh = false;
 		hasMesh = true;
 	}
 
 
-	void mergeFaces( ref Size[,,] faces )
+	void drawFaces( bool[,,] faces, Vector3 offset, Vector3 right, Vector3 up )
 	{
-		Debug.Log( "MergeFaces" );
+		int width;
+		int height;
 
-		growFace( ref faces, new Position3( 2, 2, 2 ) );
-
-//		for ( int x = 0; x < size; ++x )
-//		{
-//			for ( int y = 0; y < size; ++y )
-//			{
-//				for ( int z = 0; z < size; ++z )
-//				{
-//					growFace( faces, new Position3( x, y, z ) );
-//				}
-//			}
-//		}
-	}
-
-
-	void growFace( ref Size[,,] faces, Position3 facePosition )
-	{
-		var faceSize = faces[ facePosition.x, facePosition.y, facePosition.z ];
-
-		Debug.Log( "Grow face at " + facePosition + " size: " + faceSize.w + ", " + faceSize.h );
-
-		if ( faceSize.w == 0 || faceSize.h == 0 ) return;
-//
-//		var neighbourPosition = facePosition;
-//
-//		neighbourPosition.x = facePosition.x + faceSize.w;
-
-//		while ( faces[ neighbourPosition.x, neighbourPosition.y, neighbourPosition.z ].h == faceSize.h )
-//		{
-//			faceSize.w += faces[ neighbourPosition.x, neighbourPosition.y, neighbourPosition.z ].w;
-//			faces[ neighbourPosition.x, neighbourPosition.y, neighbourPosition.z ].h = 0;
-//			faces[ neighbourPosition.x, neighbourPosition.y, neighbourPosition.z ].w = 0;
-//
-//			neighbourPosition.x = facePosition.x + faceSize.w;
-//		}
-
-		Debug.Log( "Result size: " + faceSize.w + ", " + faceSize.h );
-
-		faces[ facePosition.x, facePosition.y, facePosition.z ] = faceSize;
-	}
-
-
-	Dictionary< Position3, Position2 > optimizeFaces( Dictionary< Position3, Position2 > faces, Position3 up, Position3 right, Position3 lastFace )
-	{
-		Dictionary< Position3, Position2 > best = faces;
-
-		foreach ( Position3 currentFace in faces.Keys.ToList().OrderBy( key => key ) )
-		{
-			if ( currentFace.CompareTo( lastFace ) < 0 ) return best;
-
-			Position2 faceSize = faces[ currentFace ]; 
-
-			Position2 neighbourFaceSize;
-			Position3 neighbourFacePosition = currentFace + right * faceSize.x;
-
-			if ( faces.TryGetValue( neighbourFacePosition, out neighbourFaceSize ) && faceSize.y == neighbourFaceSize.y )
-			{
-				Dictionary< Position3, Position2 > facesMergedRight = new Dictionary< Position3, Position2 >( faces );
-
-				facesMergedRight.Remove( neighbourFacePosition );
-
-				Position2 newFaceSize = new Position2( faceSize.x + neighbourFaceSize.x, faceSize.y );
-				facesMergedRight[ currentFace ] = newFaceSize;
-
-				facesMergedRight = optimizeFaces( facesMergedRight, up, right, currentFace );
-
-				if ( facesMergedRight.Count < best.Count )
-				{
-					best = facesMergedRight;
-				}
-			}
-
-			neighbourFacePosition = currentFace + up * faceSize.y;
-
-			if ( faces.TryGetValue( neighbourFacePosition, out neighbourFaceSize ) && faceSize.x == neighbourFaceSize.x )
-			{
-				Dictionary< Position3, Position2 > facesMergedUp = new Dictionary< Position3, Position2 >( faces );
-
-				facesMergedUp.Remove( neighbourFacePosition );
-
-				Position2 newFaceSize = new Position2( faceSize.x, faceSize.y + neighbourFaceSize.y );
-				facesMergedUp[ currentFace ] = newFaceSize;
-
-				facesMergedUp = optimizeFaces( facesMergedUp, up, right, currentFace );
-
-//				Debug.Log( "merging face (" + origo + ", " + faceSize + ") with (" + neighbourFacePosition + ", " + neighbourFaceSize + " into (" + origo + newFaceSize + ")" );
-
-				if ( facesMergedUp.Count < best.Count )
-				{
-					best = facesMergedUp;
-				}
-			}
-		}
-
-		return best;
-	}
-
-
-	void drawFaces( Size[,,] faces, Vector3 offset, Vector3 up, Vector3 right )
-	{
-		for ( int x = 0; x < size; ++x )
+		for ( int z = 0; z < size; ++z )
 		{
 			for ( int y = 0; y < size; ++y )
 			{
-				for ( int z = 0; z < size; ++z )
+				for ( int x = 0; x < size; )
 				{
-					Size face = faces[ x, y, z ];
+					if ( !faces[ x, y, z ] )
+					{
+						++x;
+						continue;
+					}
 
-					if ( face.w == 0 || face.h == 0 ) continue;
+					width = 1;
+					height = 1;
 
-					drawFace( offset + new Vector3( x, y, z ), up * face.h, right * face.w );
+					while ( x + width < size && faces[ x + width, y, z ] )
+					{
+						++width;
+//						faces[ x, y, z + width ] = false;
+					}
+
+					Debug.Log( "Face at (" + x + "," + y + "," + z + ") size (" + width + "," + height );
+
+					drawFace( offset + new Vector3( x, y, z ), right * width, up * height );
+
+					x += width;
 				}
 			}
 		}
 	}
 
 
-	void drawFace( Vector3 origin, Vector3 up, Vector3 right )
+	void drawFace( Vector3 origin, Vector3 right, Vector3 up )
 	{
 //		Debug.Log( "Drawing face " + origin + " up: " + up + " right: " + right );
 

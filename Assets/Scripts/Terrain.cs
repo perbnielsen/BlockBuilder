@@ -69,7 +69,7 @@ public class Terrain : MonoBehaviour
 	{
 		( new Thread( Chunk.backgroundTask ) ).Start();
 
-		displayChunkDistance = 8;
+		displayChunkDistance = 4;
 	}
 
 
