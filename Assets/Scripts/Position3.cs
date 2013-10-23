@@ -1,14 +1,27 @@
 using UnityEngine;
+using System;
 
 
-public struct Position3
+public struct Position3 : IComparable
 {
-	public static readonly Position3 right = new Position3( 1, 0, 0 );
-	public static readonly Position3 left = new Position3( -1, 0, 0 );
-	public static readonly Position3 up = new Position3( 0, 1, 0 );
-	public static readonly Position3 down = new Position3( 0, -1, 0 );
-	public static readonly Position3 forward = new Position3( 0, 0, 1 );
-	public static readonly Position3 back = new Position3( 0, 0, -1 );
+	public static Position3 right   { get { return new Position3( 1, 0, 0 ); } }
+
+
+	public static Position3 left    { get { return new Position3( -1, 0, 0 ); } }
+
+
+	public static Position3 up      { get { return new Position3( 0, 1, 0 ); } }
+
+
+	public static Position3 down    { get { return new Position3( 0, -1, 0 ); } }
+
+
+	public static Position3 forward { get { return new Position3( 0, 0, 1 ); } }
+
+
+	public static Position3 back    { get { return new Position3( 0, 0, -1 ); } }
+
+
 	public int x, y, z;
 
 
@@ -58,19 +71,36 @@ public struct Position3
 
 	public static bool operator !=( Position3 a, Position3 b )
 	{
-		return !(a == b);
+		return !( a == b );
 	}
 
 
 	public static bool operator ==( Position3 a, Position3 b )
 	{
-		return (a.x == b.x && a.y == b.y && a.z == b.z);
+		return ( a.x == b.x && a.y == b.y && a.z == b.z );
 	}
 
 
 	public override bool Equals( System.Object obj )
 	{
-		return ((obj is Position3) && (this == (Position3)obj));
+		return ( ( obj is Position3 ) && ( this == (Position3)obj ) );
+	}
+
+
+	public int CompareTo( System.Object obj )
+	{
+		if ( obj == null ) return 1;
+
+		Position3 objAsPosition3 = (Position3)obj;
+
+		int xCompared = x.CompareTo( objAsPosition3.x );
+		if ( xCompared != 0 ) return xCompared;
+
+		int yCompared = y.CompareTo( objAsPosition3.y );
+		if ( yCompared != 0 ) return yCompared;
+
+		int zCompared = z.CompareTo( objAsPosition3.z );
+		return zCompared;
 	}
 
 

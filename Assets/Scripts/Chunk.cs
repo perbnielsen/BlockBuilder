@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using System.Collections;
 using System;
 using System.Threading;
+using System.Linq;
+using System.Xml;
+using System.ComponentModel;
+using System.Configuration;
 
 
 [RequireComponent( typeof( MeshFilter ) )]
@@ -115,7 +119,7 @@ public class Chunk : MonoBehaviour
 	{
 		if ( blocks == null ) return;
 
-		var distanceToPlayerSqr = (terrain.player.position - center).sqrMagnitude;
+		var distanceToPlayerSqr = ( terrain.player.position - center ).sqrMagnitude;
 
 		if ( distanceToPlayerSqr < terrain.displayChunkDistanceSqr )
 		{
@@ -148,17 +152,18 @@ public class Chunk : MonoBehaviour
 
 		for ( int x = 0; x < size; ++x )
 		{
-			var positionX = (float)(position.x * size + x) / 100f;
+//			var positionX = (float)(position.x * size + x) / 100f;
 
 			for ( int y = 0; y < size; ++y )
 			{
-				var positionY = (float)(position.y * size + y) / 100f;
+//				var positionY = (float)(position.y * size + y) / 100f;
 
 				for ( int z = 0; z < size; ++z )
 				{
-					var positionZ = (float)(position.z * size + z) / 100f;
+//					var positionZ = (float)(position.z * size + z) / 100f;
 
-					blocksTemp[ x, y, z ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < 0f ? Block.Type.dirt : Block.Type.air;
+//					blocksTemp[ x, y, z ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < 0f ? Block.Type.dirt : Block.Type.air;
+					blocksTemp[ x, y, z ] = ( 0 < x ) && ( x < 16 ) && ( 0 < y ) && ( y < 16 ) && ( 0 < z ) && ( z < 16 ) ? Block.Type.dirt : Block.Type.none;
 				}
 			}
 		}
@@ -170,8 +175,6 @@ public class Chunk : MonoBehaviour
 	void disableMesh()
 	{
 		renderer.enabled = false;
-
-//		hasMesh = false;
 	}
 
 
@@ -179,29 +182,29 @@ public class Chunk : MonoBehaviour
 	{
 //		Debug.Log( "Generating mesh for chunk at " + position + " on frame " + Time.frameCount );
 
-
+		if ( hasMesh )
+		{
+			renderer.enabled = true;
+			yield break;
+		}
+		
 		if ( buildingMesh )
 		{
 			Debug.LogError( "generating mesh more than once" );
 			yield break;
 		}
 
-		if ( hasMesh )
-		{
-			renderer.enabled = true;
-			yield break;
-		}
-
 		buildingMesh = true;
 
-		enqueueBackgroundTask( drawBlocks );
+//		enqueueBackgroundTask( drawBlocks );
+		drawBlocks();
 
 		while ( !hasMesh ) yield return null;
 
 		if ( triangles.Count == 0 )
 		{
 			renderer.enabled = false;
-			meshFilter.mesh = null;
+			meshFilter.mesh = null; 
 		}
 		else
 		{
@@ -235,23 +238,45 @@ public class Chunk : MonoBehaviour
 		if ( neighbourDown == null ) neighbourDown = terrain.getChunk( position + Position3.down );
 		if ( neighbourForward == null ) neighbourForward = terrain.getChunk( position + Position3.forward );
 		if ( neighbourBack == null ) neighbourBack = terrain.getChunk( position + Position3.back );
+
+		neighbourRight.neighbourLeft = this;
+		neighbourLeft.neighbourRight = this;
+		neighbourUp.neighbourDown = this;
+		neighbourDown.neighbourUp = this;
+		neighbourForward.neighbourBack = this;
+		neighbourDown.neighbourUp = this;
 	}
 
 
 	void activateNeighbours()
 	{
+		if ( neighbourRight != null ) neighbourRight.enabled = true;
+		if ( neighbourLeft != null ) neighbourLeft.enabled = true;
+		if ( neighbourUp != null ) neighbourUp.enabled = true;
+		if ( neighbourDown != null ) neighbourDown.enabled = true;
+		if ( neighbourForward != null ) neighbourForward.enabled = true;
+		if ( neighbourBack != null ) neighbourBack.enabled = true;
+	}
 
-		if ( neighbourRight != null || (neighbourRight = terrain.getChunk( position + Position3.right, false )) != null ) neighbourRight.enabled = true;
-		if ( neighbourLeft != null || (neighbourLeft = terrain.getChunk( position + Position3.left, false )) != null ) neighbourLeft.enabled = true;
-		if ( neighbourUp != null || (neighbourUp = terrain.getChunk( position + Position3.up, false )) != null ) neighbourUp.enabled = true;
-		if ( neighbourDown != null || (neighbourDown = terrain.getChunk( position + Position3.down, false )) != null ) neighbourDown.enabled = true;
-		if ( neighbourForward != null || (neighbourForward = terrain.getChunk( position + Position3.forward, false )) != null ) neighbourForward.enabled = true;
-		if ( neighbourBack != null || (neighbourBack = terrain.getChunk( position + Position3.back, false )) != null ) neighbourBack.enabled = true;
+
+	struct Size
+	{
+		public byte w;
+		public byte h;
 	}
 
 
 	void drawBlocks()
 	{
+		var right = new Size[size, size, size];
+//		var left = new Size[size, size, size];
+//		var up = new Size[size, size, size];
+//		var down = new Size[size, size, size];
+//		var forward = new Size[size, size, size];
+//		var back = new Size[size, size, size];
+
+		var faceSize = new Size { w = 1, h = 1 };
+
 		for ( int x = 0; x < size; ++x )
 		{
 			for ( int y = 0; y < size; ++y )
@@ -259,37 +284,175 @@ public class Chunk : MonoBehaviour
 				for ( int z = 0; z < size; ++z )
 				{
 					if ( blocks[ x, y, z ] == 0 ) continue;
-
-					var origin = new Vector3( x, y, z );
-
-					// Right
-					if ( Block.isTransparent( getBlock( x + 1, y, z ) ) ) drawFace( origin + Vector3.right, Vector3.up, Vector3.forward );
-
-					// Left
-					if ( Block.isTransparent( getBlock( x - 1, y, z ) ) ) drawFace( origin + Vector3.forward, Vector3.up, Vector3.back );
-
-					// Back
-					if ( Block.isTransparent( getBlock( x, y, z + 1 ) ) ) drawFace( origin + Vector3.forward + Vector3.right, Vector3.up, Vector3.left );
-
-					// Front
-					if ( Block.isTransparent( getBlock( x, y, z - 1 ) ) ) drawFace( origin, Vector3.up, Vector3.right );
-
-					// Top
-					if ( Block.isTransparent( getBlock( x, y + 1, z ) ) ) drawFace( origin + Vector3.up, Vector3.forward, Vector3.right );
-
-					// Bottom
-					if ( Block.isTransparent( getBlock( x, y - 1, z ) ) ) drawFace( origin, Vector3.right, Vector3.forward );
+					
+					if ( Block.isTransparent( getBlock( x + 1, y, z ) ) )
+					{
+						right[ x, y, z ] = faceSize;
+						Debug.Log( "Set " + x + ", " + y + ", " + z + " to " + right[ x, y, z ].w + ", " + right[ x, y, z ].h );
+					}
+//					if ( Block.isTransparent( getBlock( x - 1, y, z ) ) ) left[ x, y, z ] = faceSize;
+//					if ( Block.isTransparent( getBlock( x, y + 1, z ) ) ) up[ x, y, z ] = faceSize;
+//					if ( Block.isTransparent( getBlock( x, y - 1, z ) ) ) down[ x, y, z ] = faceSize;
+//					if ( Block.isTransparent( getBlock( x, y, z + 1 ) ) ) forward[ x, y, z ] = faceSize;
+//					if ( Block.isTransparent( getBlock( x, y, z - 1 ) ) ) back[ x, y, z ] = faceSize;
 				}
 			}
 		}
+
+//		Debug.Log( "rights facing faces: " + right.Count );
+//		printFaces( right );
+	
+//		right = optimizeFaces( right, Position3.up, Position3.forward, Position3.left );
+//		left = optimizeFaces( left, Position3.up, Position3.forward, Position3.left );
+//		up = optimizeFaces( up, Position3.forward, Position3.right, Position3.left );
+//		down = optimizeFaces( down, Position3.right, Position3.forward, Position3.left );
+//		forward = optimizeFaces( forward, Position3.up, Position3.right, Position3.left );
+//		back = optimizeFaces( back, Position3.up, Position3.right, Position3.left ); 
+
+//		Debug.Log( "rights facing faces optimized: " + right.Count );
+
+//		printFaces( right );
+
+		mergeFaces( ref right );
+
+
+		drawFaces( right, Vector3.right, Vector3.up, Vector3.forward );
+//		drawFaces( left, Vector3.forward, Vector3.up, Vector3.back );
+//		drawFaces( up, Vector3.up, Vector3.forward, Vector3.right );
+//		drawFaces( down, Vector3.zero, Vector3.right, Vector3.forward );
+//		drawFaces( forward, Vector3.forward + Vector3.right, Vector3.up, Vector3.left );
+//		drawFaces( back, Vector3.zero, Vector3.up, Vector3.right );
 
 		buildingMesh = false;
 		hasMesh = true;
 	}
 
 
+	void mergeFaces( ref Size[,,] faces )
+	{
+		Debug.Log( "MergeFaces" );
+
+		growFace( ref faces, new Position3( 2, 2, 2 ) );
+
+//		for ( int x = 0; x < size; ++x )
+//		{
+//			for ( int y = 0; y < size; ++y )
+//			{
+//				for ( int z = 0; z < size; ++z )
+//				{
+//					growFace( faces, new Position3( x, y, z ) );
+//				}
+//			}
+//		}
+	}
+
+
+	void growFace( ref Size[,,] faces, Position3 facePosition )
+	{
+		var faceSize = faces[ facePosition.x, facePosition.y, facePosition.z ];
+
+		Debug.Log( "Grow face at " + facePosition + " size: " + faceSize.w + ", " + faceSize.h );
+
+		if ( faceSize.w == 0 || faceSize.h == 0 ) return;
+//
+//		var neighbourPosition = facePosition;
+//
+//		neighbourPosition.x = facePosition.x + faceSize.w;
+
+//		while ( faces[ neighbourPosition.x, neighbourPosition.y, neighbourPosition.z ].h == faceSize.h )
+//		{
+//			faceSize.w += faces[ neighbourPosition.x, neighbourPosition.y, neighbourPosition.z ].w;
+//			faces[ neighbourPosition.x, neighbourPosition.y, neighbourPosition.z ].h = 0;
+//			faces[ neighbourPosition.x, neighbourPosition.y, neighbourPosition.z ].w = 0;
+//
+//			neighbourPosition.x = facePosition.x + faceSize.w;
+//		}
+
+		Debug.Log( "Result size: " + faceSize.w + ", " + faceSize.h );
+
+		faces[ facePosition.x, facePosition.y, facePosition.z ] = faceSize;
+	}
+
+
+	Dictionary< Position3, Position2 > optimizeFaces( Dictionary< Position3, Position2 > faces, Position3 up, Position3 right, Position3 lastFace )
+	{
+		Dictionary< Position3, Position2 > best = faces;
+
+		foreach ( Position3 currentFace in faces.Keys.ToList().OrderBy( key => key ) )
+		{
+			if ( currentFace.CompareTo( lastFace ) < 0 ) return best;
+
+			Position2 faceSize = faces[ currentFace ]; 
+
+			Position2 neighbourFaceSize;
+			Position3 neighbourFacePosition = currentFace + right * faceSize.x;
+
+			if ( faces.TryGetValue( neighbourFacePosition, out neighbourFaceSize ) && faceSize.y == neighbourFaceSize.y )
+			{
+				Dictionary< Position3, Position2 > facesMergedRight = new Dictionary< Position3, Position2 >( faces );
+
+				facesMergedRight.Remove( neighbourFacePosition );
+
+				Position2 newFaceSize = new Position2( faceSize.x + neighbourFaceSize.x, faceSize.y );
+				facesMergedRight[ currentFace ] = newFaceSize;
+
+				facesMergedRight = optimizeFaces( facesMergedRight, up, right, currentFace );
+
+				if ( facesMergedRight.Count < best.Count )
+				{
+					best = facesMergedRight;
+				}
+			}
+
+			neighbourFacePosition = currentFace + up * faceSize.y;
+
+			if ( faces.TryGetValue( neighbourFacePosition, out neighbourFaceSize ) && faceSize.x == neighbourFaceSize.x )
+			{
+				Dictionary< Position3, Position2 > facesMergedUp = new Dictionary< Position3, Position2 >( faces );
+
+				facesMergedUp.Remove( neighbourFacePosition );
+
+				Position2 newFaceSize = new Position2( faceSize.x, faceSize.y + neighbourFaceSize.y );
+				facesMergedUp[ currentFace ] = newFaceSize;
+
+				facesMergedUp = optimizeFaces( facesMergedUp, up, right, currentFace );
+
+//				Debug.Log( "merging face (" + origo + ", " + faceSize + ") with (" + neighbourFacePosition + ", " + neighbourFaceSize + " into (" + origo + newFaceSize + ")" );
+
+				if ( facesMergedUp.Count < best.Count )
+				{
+					best = facesMergedUp;
+				}
+			}
+		}
+
+		return best;
+	}
+
+
+	void drawFaces( Size[,,] faces, Vector3 offset, Vector3 up, Vector3 right )
+	{
+		for ( int x = 0; x < size; ++x )
+		{
+			for ( int y = 0; y < size; ++y )
+			{
+				for ( int z = 0; z < size; ++z )
+				{
+					Size face = faces[ x, y, z ];
+
+					if ( face.w == 0 || face.h == 0 ) continue;
+
+					drawFace( offset + new Vector3( x, y, z ), up * face.h, right * face.w );
+				}
+			}
+		}
+	}
+
+
 	void drawFace( Vector3 origin, Vector3 up, Vector3 right )
 	{
+//		Debug.Log( "Drawing face " + origin + " up: " + up + " right: " + right );
+
 		int index = vertices.Count;
 
 		vertices.Add( origin );

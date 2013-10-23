@@ -5,7 +5,7 @@ public class Block : MonoBehaviour
 {
 	public enum Type :byte
 	{
-		air,
+		none,
 		dirt,
 		undefined = 255
 	}
@@ -13,6 +13,6 @@ public class Block : MonoBehaviour
 
 	public static bool isTransparent( Block.Type block )
 	{
-		return (block == Type.air);
+		return ( block == Type.none );
 	}
 }
