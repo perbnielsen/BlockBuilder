@@ -7,6 +7,7 @@ using System.Linq;
 using System.Xml;
 using System.ComponentModel;
 using System.Configuration;
+using System.Deployment.Internal;
 
 
 [RequireComponent( typeof( MeshFilter ) )]
@@ -288,29 +289,29 @@ public class Chunk : MonoBehaviour
 
 					Debug.Log( "Block at (" + x + "," + y + "," + z + ")" );
 
-					if ( Block.isTransparent( getBlock( x + 1, y, z ) ) ) right[ x, y, z ] = true;
-					if ( Block.isTransparent( getBlock( x - 1, y, z ) ) ) left[ x, y, z ] = true;
-					if ( Block.isTransparent( getBlock( x, y + 1, z ) ) ) up[ x, y, z ] = true;
-					if ( Block.isTransparent( getBlock( x, y - 1, z ) ) ) down[ x, y, z ] = true;
-					if ( Block.isTransparent( getBlock( x, y, z + 1 ) ) ) forward[ x, y, z ] = true;
+					if ( Block.isTransparent( getBlock( x + 1, y, z ) ) ) right[ z, y, size - 1 - x ] = true;
+					if ( Block.isTransparent( getBlock( x - 1, y, z ) ) ) left[ size - 1 - z, y, x ] = true;
+					if ( Block.isTransparent( getBlock( x, y + 1, z ) ) ) up[ x, z, size - 1 - y ] = true;
+					if ( Block.isTransparent( getBlock( x, y - 1, z ) ) ) down[ x, size - 1 - z, y ] = true;
+					if ( Block.isTransparent( getBlock( x, y, z + 1 ) ) ) forward[ size - 1 - x, y, size - 1 - z ] = true;
 					if ( Block.isTransparent( getBlock( x, y, z - 1 ) ) ) back[ x, y, z ] = true;
 				}
 			}
 		}
 
-		drawFaces( right, Vector3.right, Vector3.forward, Vector3.up );
-		drawFaces( left, Vector3.up, Vector3.forward, Vector3.down );
-		drawFaces( up, Vector3.up, Vector3.right, Vector3.forward );
-		drawFaces( down, Vector3.forward, Vector3.right, Vector3.back );
-		drawFaces( forward, Vector3.forward + Vector3.right, Vector3.left, Vector3.up );
-		drawFaces( back, Vector3.zero, Vector3.right, Vector3.up );
+		drawFaces( ref right, Vector3.right * size, Vector3.forward, Vector3.up, Vector3.left );
+		drawFaces( ref left, Vector3.forward * size, Vector3.back, Vector3.up, Vector3.right );
+		drawFaces( ref up, Vector3.up * size, Vector3.right, Vector3.forward, Vector3.down );
+		drawFaces( ref down, Vector3.forward * size, Vector3.right, Vector3.back, Vector3.up );
+		drawFaces( ref forward, Vector3.forward * size + Vector3.right * size, Vector3.left, Vector3.up, Vector3.back );
+		drawFaces( ref back, Vector3.zero, Vector3.right, Vector3.up, Vector3.forward );
 
 		buildingMesh = false;
 		hasMesh = true;
 	}
 
 
-	void drawFaces( bool[,,] faces, Vector3 offset, Vector3 right, Vector3 up )
+	void drawFaces( ref bool[,,] faces, Vector3 offset, Vector3 right, Vector3 up, Vector3 forward )
 	{
 		int width;
 		int height;
@@ -321,6 +322,7 @@ public class Chunk : MonoBehaviour
 			{
 				for ( int x = 0; x < size; )
 				{
+//					Debug.Log( "face (" + x + "," + y + "," + z + ")" );
 					if ( !faces[ x, y, z ] )
 					{
 						++x;
@@ -332,18 +334,42 @@ public class Chunk : MonoBehaviour
 
 					while ( x + width < size && faces[ x + width, y, z ] )
 					{
+						//faces[ x, y, z + width ] = false;
 						++width;
-//						faces[ x, y, z + width ] = false;
 					}
 
-					Debug.Log( "Face at (" + x + "," + y + "," + z + ") size (" + width + "," + height );
+					while ( faceCanBeExtended( ref faces, x, y + height, z, width ) )
+					{
+						Debug.Log( "extending face (" + x + "," + y + "," + z + ")" );
+						for ( int  i = 0; i < width; i++ )
+						{
+							Debug.Log( ( x + i ) + "," + ( y + height ) + "," + z );
+							faces[ x + i, y + height, z ] = false;
+						} 
+						++height;
+					}
 
-					drawFace( offset + new Vector3( x, y, z ), right * width, up * height );
+
+					Vector3 pos = offset + x * right + y * up + z * forward;
+
+					Debug.Log( "Face at (" + x + "," + y + "," + z + ") size (" + width + "," + height + ") pos: " + pos );
+
+					drawFace( pos, right * width, up * height );
 
 					x += width;
 				}
 			}
 		}
+	}
+
+
+	bool faceCanBeExtended( ref bool[,,] faces, int x, int y, int z, int width )
+	{
+		if ( y >= size ) return false;
+
+		for ( int i = x; i < x + width; ++i ) if ( !faces[ i, y, z ] ) return false;
+
+		return true;
 	}
 
 
