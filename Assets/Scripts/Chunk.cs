@@ -3,11 +3,6 @@ using System.Collections.Generic;
 using System.Collections;
 using System;
 using System.Threading;
-using System.Linq;
-using System.Xml;
-using System.ComponentModel;
-using System.Configuration;
-using System.Deployment.Internal;
 
 
 [RequireComponent( typeof( MeshFilter ) )]
@@ -153,28 +148,28 @@ public class Chunk : MonoBehaviour
 
 		for ( int x = 0; x < size; ++x )
 		{
-//			var positionX = (float)(position.x * size + x) / 100f;
+			var positionX = (float)( position.x * size + x ) / 100f;
 
 			for ( int y = 0; y < size; ++y )
 			{
-//				var positionY = (float)(position.y * size + y) / 100f;
+				var positionY = (float)( position.y * size + y ) / 100f;
 
 				for ( int z = 0; z < size; ++z )
 				{
-//					var positionZ = (float)(position.z * size + z) / 100f;
+					var positionZ = (float)( position.z * size + z ) / 100f;
 
-//					blocksTemp[ x, y, z ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < 0f ? Block.Type.dirt : Block.Type.air;
+					blocksTemp[ x, y, z ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < 0f ? Block.Type.dirt : Block.Type.none;
 //					blocksTemp[ x, y, z ] = ( 0 < x ) && ( x < 16 ) && ( 0 < y ) && ( y < 16 ) && ( 0 < z ) && ( z < 16 ) ? Block.Type.dirt : Block.Type.none;
 
-					blocksTemp[ x, y, z ] = (
-					    ( ( x == 0 ) && ( y == 0 ) && ( z == 0 ) ) ||
-					    ( ( x == 1 ) && ( y == 0 ) && ( z == 0 ) ) ||
-					    ( ( x == 0 ) && ( y == 1 ) && ( z == 0 ) ) ||
-					    ( ( x == 0 ) && ( y == 2 ) && ( z == 0 ) ) ||
-					    ( ( x == 0 ) && ( y == 0 ) && ( z == 1 ) ) ||
-					    ( ( x == 0 ) && ( y == 0 ) && ( z == 2 ) ) ||
-					    ( ( x == 0 ) && ( y == 0 ) && ( z == 3 ) )
-					) ? Block.Type.dirt : Block.Type.none;
+//					blocksTemp[ x, y, z ] = (
+//					    ( ( x == 0 ) && ( y == 0 ) && ( z == 0 ) ) ||
+//					    ( ( x == 1 ) && ( y == 0 ) && ( z == 0 ) ) ||
+//					    ( ( x == 0 ) && ( y == 1 ) && ( z == 0 ) ) ||
+//					    ( ( x == 0 ) && ( y == 2 ) && ( z == 0 ) ) ||
+//					    ( ( x == 0 ) && ( y == 0 ) && ( z == 1 ) ) ||
+//					    ( ( x == 0 ) && ( y == 0 ) && ( z == 2 ) ) ||
+//					    ( ( x == 0 ) && ( y == 0 ) && ( z == 3 ) )
+//					) ? Block.Type.dirt : Block.Type.none;
 				}
 			}
 		}
@@ -207,8 +202,8 @@ public class Chunk : MonoBehaviour
 
 		buildingMesh = true;
 
-//		enqueueBackgroundTask( drawBlocks );
-		drawBlocks();
+		enqueueBackgroundTask( drawBlocks );
+//		drawBlocks();
 
 		while ( !hasMesh ) yield return null;
 
@@ -274,9 +269,9 @@ public class Chunk : MonoBehaviour
 	{
 		var right = new bool[size, size, size];
 		var left = new bool[size, size, size];
-		var up = new bool[size, size, size];
-		var down = new bool[size, size, size];
-		var forward = new bool[size, size, size];
+		var top = new bool[size, size, size];
+		var bottom = new bool[size, size, size];
+		var front = new bool[size, size, size];
 		var back = new bool[size, size, size];
 
 		for ( int x = 0; x < size; ++x )
@@ -287,13 +282,11 @@ public class Chunk : MonoBehaviour
 				{
 					if ( blocks[ x, y, z ] == 0 ) continue;
 
-					Debug.Log( "Block at (" + x + "," + y + "," + z + ")" );
-
 					if ( Block.isTransparent( getBlock( x + 1, y, z ) ) ) right[ z, y, size - 1 - x ] = true;
 					if ( Block.isTransparent( getBlock( x - 1, y, z ) ) ) left[ size - 1 - z, y, x ] = true;
-					if ( Block.isTransparent( getBlock( x, y + 1, z ) ) ) up[ x, z, size - 1 - y ] = true;
-					if ( Block.isTransparent( getBlock( x, y - 1, z ) ) ) down[ x, size - 1 - z, y ] = true;
-					if ( Block.isTransparent( getBlock( x, y, z + 1 ) ) ) forward[ size - 1 - x, y, size - 1 - z ] = true;
+					if ( Block.isTransparent( getBlock( x, y + 1, z ) ) ) top[ x, z, size - 1 - y ] = true;
+					if ( Block.isTransparent( getBlock( x, y - 1, z ) ) ) bottom[ x, size - 1 - z, y ] = true;
+					if ( Block.isTransparent( getBlock( x, y, z + 1 ) ) ) front[ size - 1 - x, y, size - 1 - z ] = true;
 					if ( Block.isTransparent( getBlock( x, y, z - 1 ) ) ) back[ x, y, z ] = true;
 				}
 			}
@@ -301,9 +294,9 @@ public class Chunk : MonoBehaviour
 
 		drawFaces( ref right, Vector3.right * size, Vector3.forward, Vector3.up, Vector3.left );
 		drawFaces( ref left, Vector3.forward * size, Vector3.back, Vector3.up, Vector3.right );
-		drawFaces( ref up, Vector3.up * size, Vector3.right, Vector3.forward, Vector3.down );
-		drawFaces( ref down, Vector3.forward * size, Vector3.right, Vector3.back, Vector3.up );
-		drawFaces( ref forward, Vector3.forward * size + Vector3.right * size, Vector3.left, Vector3.up, Vector3.back );
+		drawFaces( ref top, Vector3.up * size, Vector3.right, Vector3.forward, Vector3.down );
+		drawFaces( ref bottom, Vector3.forward * size, Vector3.right, Vector3.back, Vector3.up );
+		drawFaces( ref front, Vector3.forward * size + Vector3.right * size, Vector3.left, Vector3.up, Vector3.back );
 		drawFaces( ref back, Vector3.zero, Vector3.right, Vector3.up, Vector3.forward );
 
 		buildingMesh = false;
@@ -322,7 +315,6 @@ public class Chunk : MonoBehaviour
 			{
 				for ( int x = 0; x < size; )
 				{
-//					Debug.Log( "face (" + x + "," + y + "," + z + ")" );
 					if ( !faces[ x, y, z ] )
 					{
 						++x;
@@ -340,10 +332,8 @@ public class Chunk : MonoBehaviour
 
 					while ( faceCanBeExtended( ref faces, x, y + height, z, width ) )
 					{
-						Debug.Log( "extending face (" + x + "," + y + "," + z + ")" );
 						for ( int  i = 0; i < width; i++ )
 						{
-							Debug.Log( ( x + i ) + "," + ( y + height ) + "," + z );
 							faces[ x + i, y + height, z ] = false;
 						} 
 						++height;
@@ -351,8 +341,6 @@ public class Chunk : MonoBehaviour
 
 
 					Vector3 pos = offset + x * right + y * up + z * forward;
-
-					Debug.Log( "Face at (" + x + "," + y + "," + z + ") size (" + width + "," + height + ") pos: " + pos );
 
 					drawFace( pos, right * width, up * height );
 

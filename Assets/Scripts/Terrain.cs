@@ -45,8 +45,8 @@ public class Terrain : MonoBehaviour
 			chunk.terrain = this;
 			chunk.size = chunkSize;
 			chunk.position = position;
-//			Chunk.enqueueBackgroundTask( chunk.generateBlocks );
-			chunk.generateBlocks();
+			Chunk.enqueueBackgroundTask( chunk.generateBlocks );
+//			chunk.generateBlocks();
 			
 			chunks.Add( position, chunk );
 		}
@@ -69,7 +69,7 @@ public class Terrain : MonoBehaviour
 	{
 		( new Thread( Chunk.backgroundTask ) ).Start();
 
-		displayChunkDistance = 4;
+		displayChunkDistance = 128;
 	}
 
 

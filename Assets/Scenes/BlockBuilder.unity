@@ -221,7 +221,7 @@ MonoBehaviour:
       m_PostInfinity: 2
     maxGroundAcceleration: 20
     maxAirAcceleration: 15
-    gravity: 0
+    gravity: 20
     maxFallSpeed: 20
   jumping:
     enabled: 1
