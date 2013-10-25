@@ -33,7 +33,7 @@ public class Terrain : MonoBehaviour
 
 	public Chunk getChunkAtCoordiate( Vector3 coordinate )
 	{
-		return getChunk( ( coordinate - Vector3.one * chunkSize * 0.5f ) / chunkSize);
+		return getChunk( coordinate / chunkSize );
 	}
 
 

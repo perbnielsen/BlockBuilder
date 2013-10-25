@@ -89,13 +89,21 @@ public class Chunk : MonoBehaviour
 
 	public void setBlock( Position3 blockPosition, Block.Type blockType )
 	{
+		Debug.Log( "Set block at " + blockPosition );
 		// Set block 
-		blocks[ blockPosition.x, blockPosition.y, blockPosition.x ] = blockType;
+		blocks[ blockPosition.x, blockPosition.y, blockPosition.z ] = blockType;
 
 		// Recalculate mesh
-		hasMesh = false;
+		StartCoroutine( generateMesh( recalculate: true ) );
 
-		StartCoroutine( generateMesh() );
+		// Update any neightbour chunk that might be affected
+		if ( blockPosition.x == 0 && neighbourLeft != null ) neighbourLeft.StartCoroutine( neighbourLeft.generateMesh( recalculate: true ) );
+		if ( blockPosition.y == 0 && neighbourDown != null ) neighbourDown.StartCoroutine( neighbourDown.generateMesh( recalculate: true ) );
+		if ( blockPosition.z == 0 && neighbourBack != null ) neighbourBack.StartCoroutine( neighbourBack.generateMesh( recalculate: true ) );
+
+		if ( blockPosition.x == size - 1 && neighbourRight != null ) neighbourRight.StartCoroutine( neighbourRight.generateMesh( recalculate: true ) );
+		if ( blockPosition.y == size - 1 && neighbourUp != null ) neighbourUp.StartCoroutine( neighbourUp.generateMesh( recalculate: true ) );
+		if ( blockPosition.z == size - 1 && neighbourForward != null ) neighbourForward.StartCoroutine( neighbourForward.generateMesh( recalculate: true ) );
 	}
 
 
@@ -179,15 +187,17 @@ public class Chunk : MonoBehaviour
 	}
 
 
-	IEnumerator generateMesh()
+	IEnumerator generateMesh( bool recalculate = false )
 	{
 //		Debug.Log( "Generating mesh for chunk at " + position + " on frame " + Time.frameCount );
 
-		if ( hasMesh )
+		if ( hasMesh && !recalculate )
 		{
 			renderer.enabled = true;
 			yield break;
 		}
+
+		hasMesh = false;
 		
 		if ( buildingMesh )
 		{
