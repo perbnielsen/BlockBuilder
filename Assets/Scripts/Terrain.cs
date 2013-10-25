@@ -31,8 +31,14 @@ public class Terrain : MonoBehaviour
 	readonly Dictionary< Position3, Chunk > chunks = new Dictionary< Position3, Chunk >();
 
 
+	public Chunk getChunkAtCoordiate( Vector3 coordinate )
+	{
+		return getChunk( ( coordinate - Vector3.one * chunkSize * 0.5f ) / chunkSize);
+	}
+
+
 	/**
-	 * @return the chunk at position. If the chunk does not exist it will be created first
+	 * @return the chunk at position (in chunks). If the chunk does not exist it will be created first
 	 */
 	public Chunk getChunk( Position3 position )
 	{
@@ -62,6 +68,8 @@ public class Terrain : MonoBehaviour
 		chunks.Remove( chunk.position );
 
 		Destroy( chunk.gameObject );
+
+		if ( chunks.Count == 0 ) getChunkAtCoordiate( player.transform.position );
 	}
 
 
@@ -69,7 +77,9 @@ public class Terrain : MonoBehaviour
 	{
 		( new Thread( Chunk.backgroundTask ) ).Start();
 
-		displayChunkDistance = 128;
+		displayChunkDistance = 64;
+
+		getChunkAtCoordiate( player.transform.position );
 	}
 
 
@@ -77,7 +87,7 @@ public class Terrain : MonoBehaviour
 	{
 		if ( Input.GetKey( KeyCode.F1 ) )
 		{
-			displayChunkDistance = Mathf.Max( chunkSize, 8 );
+			displayChunkDistance = Mathf.Max( chunkSize, displayChunkDistance - 8 );
 
 			Debug.Log( "displayChunkDistance: " + displayChunkDistance );
 		}
@@ -88,7 +98,5 @@ public class Terrain : MonoBehaviour
 
 			Debug.Log( "displayChunkDistance: " + displayChunkDistance );
 		}
-
-		getChunk( ( player.transform.position - Vector3.one * chunkSize * 0.5f ) / chunkSize );
 	}
 }

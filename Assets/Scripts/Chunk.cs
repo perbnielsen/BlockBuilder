@@ -74,32 +74,28 @@ public class Chunk : MonoBehaviour
 
 	public Block.Type getBlock( int x, int y, int z )
 	{
-		if ( x < 0 )
-		{
-			return neighbourLeft.getBlock( x + size, y, z );
-		}
-		if ( x >= size )
-		{
-			return neighbourRight.getBlock( x - size, y, z );
-		}
-		if ( y < 0 )
-		{
-			return neighbourDown.getBlock( x, y + size, z );
-		}
-		if ( y >= size )
-		{
-			return neighbourUp.getBlock( x, y - size, z );
-		}
-		if ( z < 0 )
-		{
-			return neighbourBack.getBlock( x, y, z + size );
-		} 
-		if ( z >= size )
-		{
-			return neighbourForward.getBlock( x, y, z - size );
-		}
+		if ( x < 0 ) return neighbourLeft.getBlock( x + size, y, z );
+		if ( x >= size ) return neighbourRight.getBlock( x - size, y, z );
+
+		if ( y < 0 ) return neighbourDown.getBlock( x, y + size, z );
+		if ( y >= size ) return neighbourUp.getBlock( x, y - size, z );
+
+		if ( z < 0 ) return neighbourBack.getBlock( x, y, z + size );
+		if ( z >= size ) return neighbourForward.getBlock( x, y, z - size );
 
 		return blocks[ x, y, z ];
+	}
+
+
+	public void setBlock( Position3 blockPosition, Block.Type blockType )
+	{
+		// Set block 
+		blocks[ blockPosition.x, blockPosition.y, blockPosition.x ] = blockType;
+
+		// Recalculate mesh
+		hasMesh = false;
+
+		StartCoroutine( generateMesh() );
 	}
 
 
@@ -159,7 +155,6 @@ public class Chunk : MonoBehaviour
 					var positionZ = (float)( position.z * size + z ) / 100f;
 
 					blocksTemp[ x, y, z ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < 0f ? Block.Type.dirt : Block.Type.none;
-//					blocksTemp[ x, y, z ] = ( 0 < x ) && ( x < 16 ) && ( 0 < y ) && ( y < 16 ) && ( 0 < z ) && ( z < 16 ) ? Block.Type.dirt : Block.Type.none;
 
 //					blocksTemp[ x, y, z ] = (
 //					    ( ( x == 0 ) && ( y == 0 ) && ( z == 0 ) ) ||
@@ -196,7 +191,7 @@ public class Chunk : MonoBehaviour
 		
 		if ( buildingMesh )
 		{
-			Debug.LogError( "generating mesh more than once" );
+			Debug.LogWarning( "generating mesh more than once" );
 			yield break;
 		}
 

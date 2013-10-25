@@ -41,13 +41,20 @@ public struct Position3 : IComparable
 
 	public static implicit operator Position3( Vector3 position )
 	{
-		return new Position3( Mathf.RoundToInt( position.x ), Mathf.RoundToInt( position.y ), Mathf.RoundToInt( position.z ) );
+//		return new Position3( Mathf.RoundToInt( position.x ), Mathf.RoundToInt( position.y ), Mathf.RoundToInt( position.z ) );
+		return new Position3( Mathf.FloorToInt( position.x ), Mathf.FloorToInt( position.y ), Mathf.FloorToInt( position.z ) );
 	}
 
 
 	public static Position3 operator +( Position3 positionA, Position3 positionB )
 	{
 		return new Position3( positionA.x + positionB.x, positionA.y + positionB.y, positionA.z + positionB.z );
+	}
+
+
+	public static Position3 operator -( Position3 positionA, Position3 positionB )
+	{
+		return new Position3( positionA.x - positionB.x, positionA.y - positionB.y, positionA.z - positionB.z );
 	}
 
 
