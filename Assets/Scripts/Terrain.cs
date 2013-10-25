@@ -8,7 +8,11 @@ public class Terrain : MonoBehaviour
 	public Transform player;
 	public int seed;
 	public int chunkSize;
+	public Chunk chunkPrefab;
 	float _displayChunkDistance;
+	float _displayChunkDistanceSqr;
+	float _disableChunkDistanceSqr;
+	float _destroyChunkDistanceSqr;
 
 
 	public float displayChunkDistance
@@ -17,17 +21,22 @@ public class Terrain : MonoBehaviour
 		set
 		{
 			_displayChunkDistance = value;
-			displayChunkDistanceSqr = displayChunkDistance * displayChunkDistance;
-			disableChunkDistanceSqr = ( displayChunkDistance + chunkSize * 1 ) * ( displayChunkDistance + chunkSize * 1 );
-			destroyChunkDistanceSqr = ( displayChunkDistance + chunkSize * 2 ) * ( displayChunkDistance + chunkSize * 2 );
+			_displayChunkDistanceSqr = displayChunkDistance * displayChunkDistance;
+			_disableChunkDistanceSqr = ( displayChunkDistance + chunkSize * 1 ) * ( displayChunkDistance + chunkSize * 1 );
+			_destroyChunkDistanceSqr = ( displayChunkDistance + chunkSize * 2 ) * ( displayChunkDistance + chunkSize * 2 );
 		}
 	}
-	//	[HideInInspector]
-	public float displayChunkDistanceSqr;
-	//	[HideInInspector]
-	public float disableChunkDistanceSqr;
-	public float destroyChunkDistanceSqr;
-	public Chunk chunkPrefab;
+
+
+	public float displayChunkDistanceSqr { get { return _displayChunkDistanceSqr; } }
+
+
+	public float disableChunkDistanceSqr { get { return _disableChunkDistanceSqr; } }
+
+
+	public float destroyChunkDistanceSqr { get { return _destroyChunkDistanceSqr; } }
+
+
 	readonly Dictionary< Position3, Chunk > chunks = new Dictionary< Position3, Chunk >();
 
 
@@ -44,7 +53,6 @@ public class Terrain : MonoBehaviour
 	{
 		if ( !chunks.ContainsKey( position ) )
 		{
-			// Debug.Log( "Did not find chunk at " + position + " Creating it on frame " + Time.frameCount );
 			var chunk = (Chunk)Instantiate( chunkPrefab, position * chunkSize, Quaternion.identity );
 
 			chunk.transform.parent = transform;
@@ -52,7 +60,6 @@ public class Terrain : MonoBehaviour
 			chunk.size = chunkSize;
 			chunk.position = position;
 			Chunk.enqueueBackgroundTask( chunk.generateBlocks );
-//			chunk.generateBlocks();
 			
 			chunks.Add( position, chunk );
 		}
@@ -63,8 +70,6 @@ public class Terrain : MonoBehaviour
 
 	public void deleteChunk( Chunk chunk )
 	{
-//		Debug.Log( "Deleting chunk at " + chunk.position );
-
 		chunks.Remove( chunk.position );
 
 		Destroy( chunk.gameObject );
@@ -77,7 +82,7 @@ public class Terrain : MonoBehaviour
 	{
 		( new Thread( Chunk.backgroundTask ) ).Start();
 
-		displayChunkDistance = 64;
+		displayChunkDistance = 196;
 
 		getChunkAtCoordiate( player.transform.position );
 	}
@@ -85,14 +90,14 @@ public class Terrain : MonoBehaviour
 
 	void Update()
 	{
-		if ( Input.GetKey( KeyCode.F1 ) )
+		if ( Input.GetKeyDown( KeyCode.F1 ) )
 		{
 			displayChunkDistance = Mathf.Max( chunkSize, displayChunkDistance - 8 );
 
 			Debug.Log( "displayChunkDistance: " + displayChunkDistance );
 		}
 
-		if ( Input.GetKey( KeyCode.F2 ) )
+		if ( Input.GetKeyDown( KeyCode.F2 ) )
 		{
 			displayChunkDistance += 8;
 

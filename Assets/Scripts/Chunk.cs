@@ -17,8 +17,6 @@ public class Chunk : MonoBehaviour
 	MeshFilter meshFilter;
 	MeshCollider meshCollider;
 	Block.Type[,,] blocks;
-	bool hasMesh;
-	bool buildingMesh;
 	Chunk neighbourRight;
 	Chunk neighbourLeft;
 	Chunk neighbourUp;
@@ -30,11 +28,25 @@ public class Chunk : MonoBehaviour
 	readonly List<Vector2> uvs = new List<Vector2>();
 
 
+	enum State : byte
+	{
+		GeneratingBlocks,
+		HasBlocks,
+		GeneratingMesh,
+		HasMesh,
+		Inactive,
+		Active
+	}
+
+
+	State state;
+
+
 	public delegate void Task();
 
 
 	public static Semaphore backgroundTasksCount = new Semaphore( 0, int.MaxValue );
-	public static readonly Queue< Task > backgroundTasks = new Queue<Task>();
+	public static readonly List< Task > backgroundTasks = new List< Task >();
 
 
 	public static void backgroundTask()
@@ -47,7 +59,8 @@ public class Chunk : MonoBehaviour
 
 			lock ( backgroundTasks )
 			{
-				task = backgroundTasks.Dequeue();
+				task = backgroundTasks[ 0 ];
+				backgroundTasks.RemoveAt( 0 );
 			}
 
 			task();
@@ -55,11 +68,18 @@ public class Chunk : MonoBehaviour
 	}
 
 
-	public static void enqueueBackgroundTask( Task task )
+	public static void enqueueBackgroundTask( Task task, bool urgent = false )
 	{
 		lock ( backgroundTasks )
 		{
-			backgroundTasks.Enqueue( task );
+			if ( urgent )
+			{
+				backgroundTasks.Insert( 0, task );
+			}
+			else
+			{
+				backgroundTasks.Add( task );
+			}
 		}
 
 		backgroundTasksCount.Release();
@@ -83,20 +103,20 @@ public class Chunk : MonoBehaviour
 		if ( z < 0 ) return neighbourBack.getBlock( x, y, z + size );
 		if ( z >= size ) return neighbourForward.getBlock( x, y, z - size );
 
+		if ( blocks == null ) return Block.Type.none;
+
 		return blocks[ x, y, z ];
 	}
 
 
 	public void setBlock( Position3 blockPosition, Block.Type blockType )
 	{
-		Debug.Log( "Set block at " + blockPosition );
+		if ( blocks == null ) return;
+
 		// Set block 
 		blocks[ blockPosition.x, blockPosition.y, blockPosition.z ] = blockType;
-
-		// Recalculate mesh
-		StartCoroutine( generateMesh( recalculate: true ) );
-
-		// Update any neightbour chunk that might be affected
+		
+		// Update any neighbour chunk that might be affected
 		if ( blockPosition.x == 0 && neighbourLeft != null ) neighbourLeft.StartCoroutine( neighbourLeft.generateMesh( recalculate: true ) );
 		if ( blockPosition.y == 0 && neighbourDown != null ) neighbourDown.StartCoroutine( neighbourDown.generateMesh( recalculate: true ) );
 		if ( blockPosition.z == 0 && neighbourBack != null ) neighbourBack.StartCoroutine( neighbourBack.generateMesh( recalculate: true ) );
@@ -104,20 +124,25 @@ public class Chunk : MonoBehaviour
 		if ( blockPosition.x == size - 1 && neighbourRight != null ) neighbourRight.StartCoroutine( neighbourRight.generateMesh( recalculate: true ) );
 		if ( blockPosition.y == size - 1 && neighbourUp != null ) neighbourUp.StartCoroutine( neighbourUp.generateMesh( recalculate: true ) );
 		if ( blockPosition.z == size - 1 && neighbourForward != null ) neighbourForward.StartCoroutine( neighbourForward.generateMesh( recalculate: true ) );
+		
+		// Recalculate mesh
+		StartCoroutine( generateMesh( recalculate: true ) );
 	}
 
 
 	void Start()
 	{
 		center = transform.position + Vector3.one * size / 2f;
+
 		meshFilter = GetComponent< MeshFilter >();
+
 		meshCollider = GetComponent< MeshCollider >();
 	}
 
 
 	void Update()
 	{
-		if ( blocks == null ) return;
+		if ( state < State.HasBlocks ) return;
 
 		var distanceToPlayerSqr = ( terrain.player.position - center ).sqrMagnitude;
 
@@ -146,25 +171,25 @@ public class Chunk : MonoBehaviour
 
 	public void generateBlocks()
 	{
-//		Debug.Log( "Generating blocks for chunk at " + position + " on frame " + Time.frameCount );
-
-		var blocksTemp = new Block.Type[ size, size, size ];
+		blocks = new Block.Type[ size, size, size ];
 
 		for ( int x = 0; x < size; ++x )
 		{
-			var positionX = (float)( position.x * size + x ) / 100f;
+			const float scale = 50f;
+
+			var positionX = (float)( position.x * size + x ) / scale;
 
 			for ( int y = 0; y < size; ++y )
 			{
-				var positionY = (float)( position.y * size + y ) / 100f;
+				var positionY = (float)( position.y * size + y ) / scale;
 
 				for ( int z = 0; z < size; ++z )
 				{
-					var positionZ = (float)( position.z * size + z ) / 100f;
+					var positionZ = (float)( position.z * size + z ) / scale;
 
-					blocksTemp[ x, y, z ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < 0f ? Block.Type.dirt : Block.Type.none;
+					blocks[ x, y, z ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < .75f ? Block.Type.dirt : Block.Type.none;
 
-//					blocksTemp[ x, y, z ] = (
+//					blocks[ x, y, z ] = (
 //					    ( ( x == 0 ) && ( y == 0 ) && ( z == 0 ) ) ||
 //					    ( ( x == 1 ) && ( y == 0 ) && ( z == 0 ) ) ||
 //					    ( ( x == 0 ) && ( y == 1 ) && ( z == 0 ) ) ||
@@ -177,45 +202,47 @@ public class Chunk : MonoBehaviour
 			}
 		}
 
-		blocks = blocksTemp;
+		state = State.HasBlocks;
 	}
 
 
 	void disableMesh()
 	{
 		renderer.enabled = false;
+		meshCollider.enabled = false;
 	}
 
 
 	IEnumerator generateMesh( bool recalculate = false )
 	{
-//		Debug.Log( "Generating mesh for chunk at " + position + " on frame " + Time.frameCount );
-
-		if ( hasMesh && !recalculate )
+		// If we are becoming active again, no need to regenerate the mesh, just reactivate
+		if ( state > State.GeneratingMesh && !recalculate )
 		{
 			renderer.enabled = true;
+			meshCollider.enabled = true;
+
 			yield break;
 		}
 
-		hasMesh = false;
-		
-		if ( buildingMesh )
+		if ( state == State.GeneratingMesh )
 		{
-			Debug.LogWarning( "generating mesh more than once" );
+			Debug.LogWarning( "Already generating mesh! Exiting..." );
+
 			yield break;
 		}
 
-		buildingMesh = true;
+		state = State.GeneratingMesh;
 
 		enqueueBackgroundTask( drawBlocks );
 //		drawBlocks();
 
-		while ( !hasMesh ) yield return null;
+		while ( state < State.HasMesh ) yield return null;
 
 		if ( triangles.Count == 0 )
 		{
 			renderer.enabled = false;
-			meshFilter.mesh = null; 
+
+			destroyMesh();
 		}
 		else
 		{
@@ -227,22 +254,41 @@ public class Chunk : MonoBehaviour
 			mesh.RecalculateBounds();
 			mesh.RecalculateNormals();
 
+			destroyMesh();
+
 			meshFilter.mesh = mesh;
 			meshCollider.sharedMesh = mesh;
 
 			renderer.enabled = true;
+			meshCollider.enabled = true;
 		}
 
 		vertices.Clear();
 		triangles.Clear();
 		uvs.Clear();
+
+		state = State.Active;
+	}
+
+
+	void OnDestroy()
+	{
+		destroyMesh();
+	}
+
+
+	void destroyMesh()
+	{
+		if ( state > State.GeneratingMesh )
+		{
+			Destroy( meshFilter.mesh );
+			Destroy( meshCollider.sharedMesh );
+		}
 	}
 
 
 	void generateNeighbours()
 	{
-//		Debug.Log( "Generating neighbours for chunk at " + position + " on frame " + Time.frameCount );
-
 		if ( neighbourRight == null ) neighbourRight = terrain.getChunk( position + Position3.right );
 		if ( neighbourLeft == null ) neighbourLeft = terrain.getChunk( position + Position3.left );
 		if ( neighbourUp == null ) neighbourUp = terrain.getChunk( position + Position3.up );
@@ -304,8 +350,7 @@ public class Chunk : MonoBehaviour
 		drawFaces( ref front, Vector3.forward * size + Vector3.right * size, Vector3.left, Vector3.up, Vector3.back );
 		drawFaces( ref back, Vector3.zero, Vector3.right, Vector3.up, Vector3.forward );
 
-		buildingMesh = false;
-		hasMesh = true;
+		state = State.HasMesh;
 	}
 
 
@@ -329,25 +374,21 @@ public class Chunk : MonoBehaviour
 					width = 1;
 					height = 1;
 
+					// Expand face in x
 					while ( x + width < size && faces[ x + width, y, z ] )
 					{
 						//faces[ x, y, z + width ] = false;
 						++width;
 					}
 
+					// Expand face in y
 					while ( faceCanBeExtended( ref faces, x, y + height, z, width ) )
 					{
-						for ( int  i = 0; i < width; i++ )
-						{
-							faces[ x + i, y + height, z ] = false;
-						} 
+						for ( int  i = 0; i < width; i++ ) faces[ x + i, y + height, z ] = false;
 						++height;
 					}
 
-
-					Vector3 pos = offset + x * right + y * up + z * forward;
-
-					drawFace( pos, right * width, up * height );
+					drawFace( offset + x * right + y * up + z * forward, right * width, up * height );
 
 					x += width;
 				}
@@ -368,8 +409,6 @@ public class Chunk : MonoBehaviour
 
 	void drawFace( Vector3 origin, Vector3 right, Vector3 up )
 	{
-//		Debug.Log( "Drawing face " + origin + " up: " + up + " right: " + right );
-
 		int index = vertices.Count;
 
 		vertices.Add( origin );
