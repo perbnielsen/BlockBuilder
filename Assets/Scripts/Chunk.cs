@@ -377,10 +377,13 @@ public class Chunk : MonoBehaviour
 		vertices.Add( origin + up + right );
 		vertices.Add( origin + right );
 
+		var uvUp = Vector2.up * up.magnitude;
+		var uvRight = Vector2.right * right.magnitude;
+
 		uvs.Add( Vector2.zero );
-		uvs.Add( Vector2.up );
-		uvs.Add( Vector2.up + Vector2.right );
-		uvs.Add( Vector2.right );
+		uvs.Add( uvUp );
+		uvs.Add( uvUp + uvRight );
+		uvs.Add( uvRight );
 
 		triangles.Add( index );
 		triangles.Add( index + 1 );
