@@ -5,6 +5,7 @@ using System;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using System.IO.Compression;
 
 
 [Serializable]
@@ -56,19 +57,34 @@ public class Chunk : MonoBehaviour, ISerializable
 
 
 	[ContextMenu( "Save to disk" )]
+	void _saveChunkToDisk()
+	{
+		Terrain.enqueueBackgroundTask( saveChunkToDisk );
+	}
+
+
 	void saveChunkToDisk()
 	{
 		BinaryFormatter binaryFmt = new BinaryFormatter();
 
 		using ( FileStream fileStream = new FileStream( "Chunks/" + position + ".chunk", FileMode.OpenOrCreate ) )
 		{
-			binaryFmt.Serialize( fileStream, blocks );
+			using ( DeflateStream deflateStream = new DeflateStream( fileStream, CompressionMode.Compress ) )
+			{
+				binaryFmt.Serialize( deflateStream, blocks );
+			}
 		}
 	}
 
 
 	[ContextMenu( "Load from disk" )]
-	bool loadFromDisk()
+	void _loadFromDisk()
+	{
+		Terrain.enqueueBackgroundTask( loadFromDisk );
+	}
+
+
+	void loadFromDisk()
 	{
 		BinaryFormatter binaryFmt = new BinaryFormatter();
 
@@ -76,21 +92,20 @@ public class Chunk : MonoBehaviour, ISerializable
 		{
 			using ( FileStream fileStream = new FileStream( "Chunks/" + position + ".chunk", FileMode.Open ) )
 			{
-				blocks = (Block.Type[,,])binaryFmt.Deserialize( fileStream );
-
-				StartCoroutine( generateMesh( recalculate: true ) );
+				using ( DeflateStream deflateStream = new DeflateStream( fileStream, CompressionMode.Decompress ) )
+				{
+					blocks = (Block.Type[,,])binaryFmt.Deserialize( deflateStream );
+				}
 			}
+
+			state = State.HasBlocks;
 		}
 		catch ( FileNotFoundException )
 		{
-			return false;
 		}
 		catch ( DirectoryNotFoundException )
 		{
-			return false;
 		}
-
-		return true;
 	}
 
 	#endregion
@@ -178,6 +193,8 @@ public class Chunk : MonoBehaviour, ISerializable
 		if ( distanceToPlayerSqr > terrain.disableChunkDistanceSqr )
 		{
 			disableMesh();
+
+			state = State.Inactive;
 		}
 		
 		if ( distanceToPlayerSqr > terrain.destroyChunkDistanceSqr )
@@ -232,6 +249,7 @@ public class Chunk : MonoBehaviour, ISerializable
 	{
 		renderer.enabled = false;
 		meshCollider.enabled = false;
+
 	}
 
 
@@ -261,9 +279,7 @@ public class Chunk : MonoBehaviour, ISerializable
 
 		if ( triangles.Count == 0 )
 		{
-			disableMesh();
-
-//			destroyMesh();
+			destroyMesh();
 		}
 		else
 		{
@@ -300,11 +316,8 @@ public class Chunk : MonoBehaviour, ISerializable
 
 	void destroyMesh()
 	{
-		if ( state >= State.HasMesh )
-		{
-			Destroy( meshFilter.mesh );
-			Destroy( meshCollider.sharedMesh );
-		}
+		Destroy( meshFilter.mesh );
+		Destroy( meshCollider.sharedMesh );
 	}
 
 
