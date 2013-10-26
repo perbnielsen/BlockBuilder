@@ -28,7 +28,7 @@ public class Player : MonoBehaviour
 				{
 					Chunk chunk = terrain.getChunkAtCoordiate( blockPositionAdd );
 
-					chunk.setBlock( blockPositionAdd - chunk.position * terrain.chunkSize, Block.Type.dirt );
+					chunk.setBlock( blockPositionAdd - chunk.position * terrain.chunkSize, Block.Type.rock );
 				}
 			}
 		}

@@ -2,7 +2,6 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
 using System;
-using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using System.IO.Compression;
@@ -12,7 +11,7 @@ using System.IO.Compression;
 [RequireComponent( typeof( MeshFilter ) )]
 [RequireComponent( typeof( MeshRenderer ) )]
 [RequireComponent( typeof( MeshCollider ) )]
-public class Chunk : MonoBehaviour, ISerializable
+public class Chunk : MonoBehaviour
 {
 	public Terrain terrain;
 	public int size;
@@ -48,22 +47,14 @@ public class Chunk : MonoBehaviour, ISerializable
 
 	#region Serialization
 
-	public virtual void GetObjectData( SerializationInfo info, StreamingContext context )
-	{
-		if ( info == null ) Debug.LogError( "info was null" );
-
-		info.AddValue( "blocks", blocks );
-	}
-
-
 	[ContextMenu( "Save to disk" )]
-	void _saveChunkToDisk()
+	void saveChunkToDisk()
 	{
-		Terrain.enqueueBackgroundTask( saveChunkToDisk );
+		Terrain.enqueueBackgroundTask( saveChunkToDiskTask );
 	}
 
 
-	void saveChunkToDisk()
+	void saveChunkToDiskTask()
 	{
 		BinaryFormatter binaryFmt = new BinaryFormatter();
 
@@ -78,13 +69,17 @@ public class Chunk : MonoBehaviour, ISerializable
 
 
 	[ContextMenu( "Load from disk" )]
-	void _loadFromDisk()
+	void loadFromDisk()
 	{
-		Terrain.enqueueBackgroundTask( loadFromDisk );
+		state = State.GeneratingBlocks;
+
+		enabled = true;
+
+		Terrain.enqueueBackgroundTask( loadChunkFromDiskTask );
 	}
 
 
-	void loadFromDisk()
+	void loadChunkFromDiskTask()
 	{
 		BinaryFormatter binaryFmt = new BinaryFormatter();
 
@@ -226,7 +221,7 @@ public class Chunk : MonoBehaviour, ISerializable
 				{
 					var positionZ = (float)( position.z * size + z ) / scale;
 
-					blocks[ x, y, z ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < .75f ? Block.Type.dirt : Block.Type.none;
+					blocks[ x, y, z ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < .75f ? Block.Type.rock : Block.Type.none;
 
 //					blocks[ x, y, z ] = (
 //					    ( ( x == 0 ) && ( y == 0 ) && ( z == 0 ) ) ||
@@ -255,6 +250,7 @@ public class Chunk : MonoBehaviour, ISerializable
 
 	IEnumerator generateMesh( bool recalculate = false )
 	{
+		Debug.Log( "generate mesh" );
 		if ( state == State.GeneratingMesh )
 		{
 			Debug.LogWarning( "Already generating mesh! Exiting..." );

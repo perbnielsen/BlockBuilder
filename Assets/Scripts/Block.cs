@@ -6,7 +6,7 @@ public class Block : MonoBehaviour
 	public enum Type :byte
 	{
 		none,
-		dirt,
+		rock,
 		undefined = 255
 	}
 
