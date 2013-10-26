@@ -21,16 +21,14 @@ public class Player : MonoBehaviour
 	
 			if ( Physics.Raycast( transform.position, transform.forward, out hit, 5f, 1 << 9 ) )
 			{
-//				if ( Vector3.Distance( hit.point, transform.parent.position ) > 2f )
-				{
-					Position3 blockPositionAdd = hit.point + hit.normal / 2f;
+				Position3 blockPositionAdd = hit.point + hit.normal / 2f;
 
-					if ( !Physics.CheckSphere( (Vector3)blockPositionAdd + ( Vector3.one / 2f ), 0.7f, 1 << 8 ) )
-					{
-						Chunk chunk = terrain.getChunkAtCoordiate( blockPositionAdd );
-	
-						chunk.setBlock( blockPositionAdd - chunk.position * terrain.chunkSize, Block.Type.dirt );
-					}
+				if ( Physics.OverlapSphere( (Vector3)blockPositionAdd + ( Vector3.one / 2f ), 0.87f, 1 << 8 ).Length == 0 )
+//				if ( !Physics.CheckSphere( (Vector3)blockPositionAdd + ( Vector3.one / 2f ), 0.7f, 1 << 8 ) )
+				{
+					Chunk chunk = terrain.getChunkAtCoordiate( blockPositionAdd );
+
+					chunk.setBlock( blockPositionAdd - chunk.position * terrain.chunkSize, Block.Type.dirt );
 				}
 			}
 		}
@@ -49,8 +47,4 @@ public class Player : MonoBehaviour
 			}
 		}
 	}
-	//	void OnDrawGizmos()
-	//	{
-	//		Gizmos.DrawLine( transform.position, transform.position + transform.forward * 10f );
-	//	}
 }

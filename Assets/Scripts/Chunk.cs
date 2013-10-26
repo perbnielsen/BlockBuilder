@@ -2,20 +2,23 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
 using System;
-using System.Threading;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.IO;
 
 
+[Serializable]
 [RequireComponent( typeof( MeshFilter ) )]
 [RequireComponent( typeof( MeshRenderer ) )]
 [RequireComponent( typeof( MeshCollider ) )]
-public class Chunk : MonoBehaviour
+public class Chunk : MonoBehaviour, ISerializable
 {
 	public Terrain terrain;
 	public int size;
 	public Vector3 center;
 	public Position3 position;
-	MeshFilter meshFilter;
-	MeshCollider meshCollider;
+	public MeshFilter meshFilter;
+	public MeshCollider meshCollider;
 	Block.Type[,,] blocks;
 	Chunk neighbourRight;
 	Chunk neighbourLeft;
@@ -30,6 +33,7 @@ public class Chunk : MonoBehaviour
 
 	enum State : byte
 	{
+		Initialising,
 		GeneratingBlocks,
 		HasBlocks,
 		GeneratingMesh,
@@ -41,50 +45,55 @@ public class Chunk : MonoBehaviour
 
 	State state;
 
+	#region Serialization
 
-	public delegate void Task();
-
-
-	public static Semaphore backgroundTasksCount = new Semaphore( 0, int.MaxValue );
-	public static readonly List< Task > backgroundTasks = new List< Task >();
-
-
-	public static void backgroundTask()
+	public virtual void GetObjectData( SerializationInfo info, StreamingContext context )
 	{
-		while ( true )
+		if ( info == null ) Debug.LogError( "info was null" );
+
+		info.AddValue( "blocks", blocks );
+	}
+
+
+	[ContextMenu( "Save to disk" )]
+	void saveChunkToDisk()
+	{
+		BinaryFormatter binaryFmt = new BinaryFormatter();
+
+		using ( FileStream fileStream = new FileStream( "Chunks/" + position + ".chunk", FileMode.OpenOrCreate ) )
 		{
-			backgroundTasksCount.WaitOne();
-
-			Task task;
-
-			lock ( backgroundTasks )
-			{
-				task = backgroundTasks[ 0 ];
-				backgroundTasks.RemoveAt( 0 );
-			}
-
-			task();
+			binaryFmt.Serialize( fileStream, blocks );
 		}
 	}
 
 
-	public static void enqueueBackgroundTask( Task task, bool urgent = false )
+	[ContextMenu( "Load from disk" )]
+	bool loadFromDisk()
 	{
-		lock ( backgroundTasks )
+		BinaryFormatter binaryFmt = new BinaryFormatter();
+
+		try
 		{
-			if ( urgent )
+			using ( FileStream fileStream = new FileStream( "Chunks/" + position + ".chunk", FileMode.Open ) )
 			{
-				backgroundTasks.Insert( 0, task );
-			}
-			else
-			{
-				backgroundTasks.Add( task );
+				blocks = (Block.Type[,,])binaryFmt.Deserialize( fileStream );
+
+				StartCoroutine( generateMesh( recalculate: true ) );
 			}
 		}
+		catch ( FileNotFoundException )
+		{
+			return false;
+		}
+		catch ( DirectoryNotFoundException )
+		{
+			return false;
+		}
 
-		backgroundTasksCount.Release();
+		return true;
 	}
 
+	#endregion
 
 	public Block.Type getBlock( Position3 blockPosition )
 	{
@@ -111,11 +120,21 @@ public class Chunk : MonoBehaviour
 
 	public void setBlock( Position3 blockPosition, Block.Type blockType )
 	{
-		if ( blocks == null ) return;
+		if ( state < State.HasBlocks ) return;
 
 		// Set block 
 		blocks[ blockPosition.x, blockPosition.y, blockPosition.z ] = blockType;
-		
+
+		// Note: Since we mark recalculation of the mesh as urgent,
+		//       it will be added to the head of the background taks queue.
+		//       So the order they are executed in, is reverse of the order in which they are added.
+
+		if ( Block.isTransparent( blockType ) )
+		{
+			// Recalculate mesh
+			StartCoroutine( generateMesh( recalculate: true ) );
+		}
+
 		// Update any neighbour chunk that might be affected
 		if ( blockPosition.x == 0 && neighbourLeft != null ) neighbourLeft.StartCoroutine( neighbourLeft.generateMesh( recalculate: true ) );
 		if ( blockPosition.y == 0 && neighbourDown != null ) neighbourDown.StartCoroutine( neighbourDown.generateMesh( recalculate: true ) );
@@ -124,18 +143,19 @@ public class Chunk : MonoBehaviour
 		if ( blockPosition.x == size - 1 && neighbourRight != null ) neighbourRight.StartCoroutine( neighbourRight.generateMesh( recalculate: true ) );
 		if ( blockPosition.y == size - 1 && neighbourUp != null ) neighbourUp.StartCoroutine( neighbourUp.generateMesh( recalculate: true ) );
 		if ( blockPosition.z == size - 1 && neighbourForward != null ) neighbourForward.StartCoroutine( neighbourForward.generateMesh( recalculate: true ) );
-		
-		// Recalculate mesh
-		StartCoroutine( generateMesh( recalculate: true ) );
+
+		if ( !Block.isTransparent( blockType ) )
+		{
+			// Recalculate mesh
+			StartCoroutine( generateMesh( recalculate: true ) );
+		}
 	}
 
 
 	void Start()
 	{
 		center = transform.position + Vector3.one * size / 2f;
-
 		meshFilter = GetComponent< MeshFilter >();
-
 		meshCollider = GetComponent< MeshCollider >();
 	}
 
@@ -171,6 +191,8 @@ public class Chunk : MonoBehaviour
 
 	public void generateBlocks()
 	{
+		state = State.GeneratingBlocks;
+
 		blocks = new Block.Type[ size, size, size ];
 
 		for ( int x = 0; x < size; ++x )
@@ -215,6 +237,13 @@ public class Chunk : MonoBehaviour
 
 	IEnumerator generateMesh( bool recalculate = false )
 	{
+		if ( state == State.GeneratingMesh )
+		{
+			Debug.LogWarning( "Already generating mesh! Exiting..." );
+			
+			yield break;
+		}
+		
 		// If we are becoming active again, no need to regenerate the mesh, just reactivate
 		if ( state > State.GeneratingMesh && !recalculate )
 		{
@@ -224,25 +253,17 @@ public class Chunk : MonoBehaviour
 			yield break;
 		}
 
-		if ( state == State.GeneratingMesh )
-		{
-			Debug.LogWarning( "Already generating mesh! Exiting..." );
-
-			yield break;
-		}
-
 		state = State.GeneratingMesh;
 
-		enqueueBackgroundTask( drawBlocks );
-//		drawBlocks();
+		Terrain.enqueueBackgroundTask( drawBlocks, recalculate );
 
 		while ( state < State.HasMesh ) yield return null;
 
 		if ( triangles.Count == 0 )
 		{
-			renderer.enabled = false;
+			disableMesh();
 
-			destroyMesh();
+//			destroyMesh();
 		}
 		else
 		{
@@ -279,7 +300,7 @@ public class Chunk : MonoBehaviour
 
 	void destroyMesh()
 	{
-		if ( state > State.GeneratingMesh )
+		if ( state >= State.HasMesh )
 		{
 			Destroy( meshFilter.mesh );
 			Destroy( meshCollider.sharedMesh );

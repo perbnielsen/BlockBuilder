@@ -45,23 +45,73 @@ public class Terrain : MonoBehaviour
 		return getChunk( coordinate / chunkSize );
 	}
 
+	#region Background task system
 
-	/**
-	 * @return the chunk at position (in chunks). If the chunk does not exist it will be created first
-	 */
+	public delegate void Task();
+
+
+	public static Semaphore backgroundTasksCount = new Semaphore( 0, int.MaxValue );
+	public static readonly List< Task > backgroundTasks = new List< Task >();
+
+
+	public static void backgroundTask()
+	{
+		while ( true )
+		{
+			backgroundTasksCount.WaitOne();
+
+			Task task;
+
+			lock ( backgroundTasks )
+			{
+				task = backgroundTasks[ 0 ];
+				backgroundTasks.RemoveAt( 0 );
+			}
+
+			task();
+		}
+	}
+
+
+	public static void enqueueBackgroundTask( Task task, bool urgent = false )
+	{
+		lock ( backgroundTasks )
+		{
+			if ( urgent )
+			{
+				backgroundTasks.Insert( 0, task );
+			}
+			else
+			{
+				backgroundTasks.Add( task );
+			}
+		}
+
+		backgroundTasksCount.Release();
+	}
+
+	#endregion
+
+	void createChunk( Position3 position )
+	{
+		var chunk = (Chunk)Instantiate( chunkPrefab, position * chunkSize, Quaternion.identity );
+		chunk.transform.parent = transform;
+		chunk.terrain = this;
+		chunk.size = chunkSize;
+		chunk.position = position;
+
+		chunks.Add( position, chunk );
+
+		enqueueBackgroundTask( chunk.generateBlocks );
+	}
+
+
 	public Chunk getChunk( Position3 position )
 	{
+		// Note: Returns the chunk at position (in chunks). If the chunk does not exist it will be created first
 		if ( !chunks.ContainsKey( position ) )
 		{
-			var chunk = (Chunk)Instantiate( chunkPrefab, position * chunkSize, Quaternion.identity );
-
-			chunk.transform.parent = transform;
-			chunk.terrain = this;
-			chunk.size = chunkSize;
-			chunk.position = position;
-			Chunk.enqueueBackgroundTask( chunk.generateBlocks );
-			
-			chunks.Add( position, chunk );
+			createChunk( position );
 		}
 
 		return chunks[ position ];
@@ -80,9 +130,9 @@ public class Terrain : MonoBehaviour
 
 	void Start()
 	{
-		( new Thread( Chunk.backgroundTask ) ).Start();
+		( new Thread( backgroundTask ) ).Start();
 
-		displayChunkDistance = 196;
+		displayChunkDistance = 64;
 
 		getChunkAtCoordiate( player.transform.position );
 	}

@@ -114,7 +114,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   player: {fileID: 354730897}
   seed: 0
-  chunkSize: 32
+  chunkSize: 64
   chunkPrefab: {fileID: 11400000, guid: 593ee089cdb3540b1a217913c94ad1f1, type: 2}
 --- !u!1 &354730893
 GameObject:
@@ -401,8 +401,8 @@ MonoBehaviour:
   sensitivityY: 5
   minimumX: -360
   maximumX: 360
-  minimumY: -80
-  maximumY: 80
+  minimumY: -85
+  maximumY: 85
 --- !u!114 &728618787
 MonoBehaviour:
   m_ObjectHideFlags: 0
