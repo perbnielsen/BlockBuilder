@@ -5,6 +5,7 @@ using System.Threading;
 
 public class Terrain : MonoBehaviour
 {
+	public bool isQuitting;
 	public Transform player;
 	public int seed;
 	public int chunkSize;
@@ -94,6 +95,8 @@ public class Terrain : MonoBehaviour
 
 	void createChunk( Position3 position )
 	{
+		if ( isQuitting ) return;
+
 		var chunk = (Chunk)Instantiate( chunkPrefab, position * chunkSize, Quaternion.identity );
 		chunk.transform.parent = transform;
 		chunk.terrain = this;
@@ -153,5 +156,11 @@ public class Terrain : MonoBehaviour
 
 			Debug.Log( "displayChunkDistance: " + displayChunkDistance );
 		}
+	}
+
+
+	void OnApplicationQuit()
+	{
+		isQuitting = true;
 	}
 }

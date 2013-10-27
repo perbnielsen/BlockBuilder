@@ -142,22 +142,22 @@ public class Chunk : MonoBehaviour
 		if ( Block.isTransparent( blockType ) )
 		{
 			// Recalculate mesh
-			StartCoroutine( generateMesh( recalculate: true ) );
+			StartCoroutine( generateMesh( regenerate: true ) );
 		}
 
 		// Update any neighbour chunk that might be affected
-		if ( blockPosition.x == 0 && neighbourLeft != null ) neighbourLeft.StartCoroutine( neighbourLeft.generateMesh( recalculate: true ) );
-		if ( blockPosition.y == 0 && neighbourDown != null ) neighbourDown.StartCoroutine( neighbourDown.generateMesh( recalculate: true ) );
-		if ( blockPosition.z == 0 && neighbourBack != null ) neighbourBack.StartCoroutine( neighbourBack.generateMesh( recalculate: true ) );
+		if ( blockPosition.x == 0 && neighbourLeft != null ) neighbourLeft.StartCoroutine( neighbourLeft.generateMesh( regenerate: true ) );
+		if ( blockPosition.y == 0 && neighbourDown != null ) neighbourDown.StartCoroutine( neighbourDown.generateMesh( regenerate: true ) );
+		if ( blockPosition.z == 0 && neighbourBack != null ) neighbourBack.StartCoroutine( neighbourBack.generateMesh( regenerate: true ) );
 
-		if ( blockPosition.x == size - 1 && neighbourRight != null ) neighbourRight.StartCoroutine( neighbourRight.generateMesh( recalculate: true ) );
-		if ( blockPosition.y == size - 1 && neighbourUp != null ) neighbourUp.StartCoroutine( neighbourUp.generateMesh( recalculate: true ) );
-		if ( blockPosition.z == size - 1 && neighbourForward != null ) neighbourForward.StartCoroutine( neighbourForward.generateMesh( recalculate: true ) );
+		if ( blockPosition.x == size - 1 && neighbourRight != null ) neighbourRight.StartCoroutine( neighbourRight.generateMesh( regenerate: true ) );
+		if ( blockPosition.y == size - 1 && neighbourUp != null ) neighbourUp.StartCoroutine( neighbourUp.generateMesh( regenerate: true ) );
+		if ( blockPosition.z == size - 1 && neighbourForward != null ) neighbourForward.StartCoroutine( neighbourForward.generateMesh( regenerate: true ) );
 
 		if ( !Block.isTransparent( blockType ) )
 		{
 			// Recalculate mesh
-			StartCoroutine( generateMesh( recalculate: true ) );
+			StartCoroutine( generateMesh( regenerate: true ) );
 		}
 	}
 
@@ -248,9 +248,8 @@ public class Chunk : MonoBehaviour
 	}
 
 
-	IEnumerator generateMesh( bool recalculate = false )
+	IEnumerator generateMesh( bool regenerate = false )
 	{
-		Debug.Log( "generate mesh" );
 		if ( state == State.GeneratingMesh )
 		{
 			Debug.LogWarning( "Already generating mesh! Exiting..." );
@@ -259,7 +258,7 @@ public class Chunk : MonoBehaviour
 		}
 		
 		// If we are becoming active again, no need to regenerate the mesh, just reactivate
-		if ( state > State.GeneratingMesh && !recalculate )
+		if ( state > State.GeneratingMesh && !regenerate )
 		{
 			renderer.enabled = true;
 			meshCollider.enabled = true;
@@ -269,7 +268,7 @@ public class Chunk : MonoBehaviour
 
 		state = State.GeneratingMesh;
 
-		Terrain.enqueueBackgroundTask( drawBlocks, recalculate );
+		Terrain.enqueueBackgroundTask( drawBlocks, regenerate );
 
 		while ( state < State.HasMesh ) yield return null;
 
@@ -306,7 +305,7 @@ public class Chunk : MonoBehaviour
 
 	void OnDestroy()
 	{
-		destroyMesh();
+		if ( !terrain.isQuitting ) destroyMesh();
 	}
 
 
