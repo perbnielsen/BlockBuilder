@@ -35,8 +35,7 @@ public class Chunk : MonoBehaviour
 		HasBlocks,
 		GeneratingMesh,
 		HasMesh,
-		Active,
-		Inactive
+		Active
 	}
 
 
@@ -58,7 +57,7 @@ public class Chunk : MonoBehaviour
 		{
 			using ( var bw = new BinaryWriter(fs) )
 			{
-				bw.Write( blocks );
+				bw.Write( GZip.compress( blocks ) );
 			} 
 		}
 	}
@@ -86,7 +85,7 @@ public class Chunk : MonoBehaviour
 			{
 				using ( var binaryReader = new BinaryReader(fs) )
 				{
-					blocks = binaryReader.ReadBytes( size * size * size );
+					blocks = GZip.decompress( binaryReader.ReadBytes( size * size * size ), size * size * size );
 				} 
 			}
 
@@ -184,15 +183,13 @@ public class Chunk : MonoBehaviour
 
 			enabled = false;
 		}
-		
-		if ( distanceToPlayerSqr > terrain.disableChunkDistanceSqr && state == State.Active )
+
+		if ( distanceToPlayerSqr > terrain.disableChunkDistanceSqr && state > State.HasMesh )
 		{
 			disableMesh();
-
-			state = State.Inactive;
 		}
-		
-		if ( distanceToPlayerSqr > terrain.destroyChunkDistanceSqr && state == State.Inactive )
+
+		if ( distanceToPlayerSqr > terrain.destroyChunkDistanceSqr )
 		{
 			activateNeighbours();
 

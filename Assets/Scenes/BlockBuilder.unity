@@ -340,6 +340,7 @@ MonoBehaviour:
   jumpForce: 7
   speed: 5
   gravity: 20
+  maxSpeed: 20
   characterController: {fileID: 354730894}
 --- !u!92 &728618788
 Behaviour:

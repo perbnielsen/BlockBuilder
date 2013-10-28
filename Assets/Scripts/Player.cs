@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System;
 
 
 public class Player : MonoBehaviour
@@ -8,6 +9,7 @@ public class Player : MonoBehaviour
 	public float jumpForce;
 	public float speed;
 	public float gravity = 20f;
+	public float maxSpeed = 20f;
 	public CharacterController characterController;
 
 
@@ -38,7 +40,7 @@ public class Player : MonoBehaviour
 			}
 		}
 	
-		if ( Input.GetMouseButtonDown( 1 ) ) // Right mouse button
+		if ( Input.GetMouseButton( 1 ) ) // Right mouse button
 		{
 			RaycastHit hit;
 
@@ -58,6 +60,8 @@ public class Player : MonoBehaviour
 		velocity += Input.GetAxis( "Vertical" ) * transform.parent.forward * speed;
 		velocity += Time.deltaTime * gravity * Vector3.down;
 		if ( Input.GetKeyDown( jumpKey ) && characterController.isGrounded ) velocity += Vector3.up * jumpForce;
+
+		velocity = Vector3.ClampMagnitude( velocity, maxSpeed );
 
 		characterController.Move( velocity * Time.deltaTime );
 	}
