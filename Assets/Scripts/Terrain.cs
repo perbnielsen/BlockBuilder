@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System.Threading;
+using System.IO;
+using System.Collections;
 
 
 public class Terrain : MonoBehaviour
@@ -14,6 +15,9 @@ public class Terrain : MonoBehaviour
 	float _displayChunkDistanceSqr;
 	float _disableChunkDistanceSqr;
 	float _destroyChunkDistanceSqr;
+	public TaskQueue chunkTasks = new TaskQueue();
+	public TaskQueue fileTasks = new TaskQueue();
+	readonly Dictionary< Position3, Chunk > chunks = new Dictionary< Position3, Chunk >();
 
 
 	public float displayChunkDistance
@@ -38,65 +42,16 @@ public class Terrain : MonoBehaviour
 	public float destroyChunkDistanceSqr { get { return _destroyChunkDistanceSqr; } }
 
 
-	readonly Dictionary< Position3, Chunk > chunks = new Dictionary< Position3, Chunk >();
-
-
 	public Chunk getChunkAtCoordiate( Vector3 coordinate )
 	{
 		return getChunk( coordinate / chunkSize );
 	}
 
-	#region Background task system
 
-	public delegate void Task();
-
-
-	public static Semaphore backgroundTasksCount = new Semaphore( 0, int.MaxValue );
-	public static readonly List< Task > backgroundTasks = new List< Task >();
-
-
-	public static void backgroundTask()
+	Chunk createChunk( Position3 position )
 	{
-		while ( true )
-		{
-			backgroundTasksCount.WaitOne();
-
-			Task task;
-
-			lock ( backgroundTasks )
-			{
-				task = backgroundTasks[ 0 ];
-				backgroundTasks.RemoveAt( 0 );
-			}
-
-			task();
-		}
-	}
-
-
-	public static void enqueueBackgroundTask( Task task, bool urgent = false )
-	{
-		lock ( backgroundTasks )
-		{
-			if ( urgent )
-			{
-				backgroundTasks.Insert( 0, task );
-			}
-			else
-			{
-				backgroundTasks.Add( task );
-			}
-		}
-
-		backgroundTasksCount.Release();
-	}
-
-	#endregion
-
-	void createChunk( Position3 position )
-	{
-		if ( isQuitting ) return;
-
+		if ( isQuitting ) return null;
+//		Debug.Log( "Creating chunk at " + position );
 		var chunk = (Chunk)Instantiate( chunkPrefab, position * chunkSize, Quaternion.identity );
 		chunk.transform.parent = transform;
 		chunk.terrain = this;
@@ -105,7 +60,9 @@ public class Terrain : MonoBehaviour
 
 		chunks.Add( position, chunk );
 
-		enqueueBackgroundTask( chunk.generateBlocks );
+		chunkTasks.enqueueTask( chunk.populateBlocks );
+
+		return chunk;
 	}
 
 
@@ -114,7 +71,7 @@ public class Terrain : MonoBehaviour
 		// Note: Returns the chunk at position (in chunks). If the chunk does not exist it will be created first
 		if ( !chunks.ContainsKey( position ) )
 		{
-			createChunk( position );
+			return createChunk( position );
 		}
 
 		return chunks[ position ];
@@ -133,9 +90,9 @@ public class Terrain : MonoBehaviour
 
 	void Start()
 	{
-		( new Thread( backgroundTask ) ).Start();
+		if ( !Directory.Exists( "Chunks" ) ) Directory.CreateDirectory( "Chunks" );
 
-		displayChunkDistance = 64;
+		displayChunkDistance = 96;
 
 		getChunkAtCoordiate( player.transform.position );
 	}
@@ -162,5 +119,7 @@ public class Terrain : MonoBehaviour
 	void OnApplicationQuit()
 	{
 		isQuitting = true;
+		chunkTasks.stop();
+		fileTasks.stop();
 	}
 }

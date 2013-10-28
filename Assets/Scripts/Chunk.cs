@@ -1,13 +1,10 @@
 using UnityEngine;
-using System.Collections.Generic;
-using System.Collections;
 using System;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
-using System.IO.Compression;
+using System.Collections;
+using System.Collections.Generic;
 
 
-[Serializable]
 [RequireComponent( typeof( MeshFilter ) )]
 [RequireComponent( typeof( MeshRenderer ) )]
 [RequireComponent( typeof( MeshCollider ) )]
@@ -19,7 +16,7 @@ public class Chunk : MonoBehaviour
 	public Position3 position;
 	public MeshFilter meshFilter;
 	public MeshCollider meshCollider;
-	Block.Type[,,] blocks;
+	byte[] blocks;
 	Chunk neighbourRight;
 	Chunk neighbourLeft;
 	Chunk neighbourUp;
@@ -38,59 +35,59 @@ public class Chunk : MonoBehaviour
 		HasBlocks,
 		GeneratingMesh,
 		HasMesh,
-		Inactive,
-		Active
+		Active,
+		Inactive
 	}
 
 
 	State state;
+
 
 	#region Serialization
 
 	[ContextMenu( "Save to disk" )]
 	void saveChunkToDisk()
 	{
-		Terrain.enqueueBackgroundTask( saveChunkToDiskTask );
+		terrain.fileTasks.enqueueTask( saveChunkToDiskTask );
 	}
 
 
 	void saveChunkToDiskTask()
 	{
-		BinaryFormatter binaryFmt = new BinaryFormatter();
-
-		using ( FileStream fileStream = new FileStream( "Chunks/" + position + ".chunk", FileMode.OpenOrCreate ) )
+		using ( var fs = File.Create("Chunks/" + position + ".chunk") )
 		{
-			using ( DeflateStream deflateStream = new DeflateStream( fileStream, CompressionMode.Compress ) )
+			using ( var bw = new BinaryWriter(fs) )
 			{
-				binaryFmt.Serialize( deflateStream, blocks );
-			}
+				bw.Write( blocks );
+			} 
 		}
 	}
 
 
 	[ContextMenu( "Load from disk" )]
+	// Note: Only for use from Unity!
 	void loadFromDisk()
 	{
 		state = State.GeneratingBlocks;
 
 		enabled = true;
 
-		Terrain.enqueueBackgroundTask( loadChunkFromDiskTask );
+		terrain.fileTasks.enqueueTask( loadChunkFromDiskTask );
 	}
 
 
 	void loadChunkFromDiskTask()
 	{
-		BinaryFormatter binaryFmt = new BinaryFormatter();
+		state = State.GeneratingBlocks;
 
 		try
 		{
-			using ( FileStream fileStream = new FileStream( "Chunks/" + position + ".chunk", FileMode.Open ) )
+			using ( var fs = File.OpenRead( "Chunks/" + position + ".chunk" ) )
 			{
-				using ( DeflateStream deflateStream = new DeflateStream( fileStream, CompressionMode.Decompress ) )
+				using ( var binaryReader = new BinaryReader(fs) )
 				{
-					blocks = (Block.Type[,,])binaryFmt.Deserialize( deflateStream );
-				}
+					blocks = binaryReader.ReadBytes( size * size * size );
+				} 
 			}
 
 			state = State.HasBlocks;
@@ -104,6 +101,7 @@ public class Chunk : MonoBehaviour
 	}
 
 	#endregion
+
 
 	public Block.Type getBlock( Position3 blockPosition )
 	{
@@ -124,7 +122,7 @@ public class Chunk : MonoBehaviour
 
 		if ( blocks == null ) return Block.Type.none;
 
-		return blocks[ x, y, z ];
+		return (Block.Type)blocks[ x + size * ( y + size * z ) ];
 	}
 
 
@@ -133,7 +131,7 @@ public class Chunk : MonoBehaviour
 		if ( state < State.HasBlocks ) return;
 
 		// Set block 
-		blocks[ blockPosition.x, blockPosition.y, blockPosition.z ] = blockType;
+		blocks[ blockPosition.x + size * ( blockPosition.y + size * blockPosition.z ) ] = (byte)blockType;
 
 		// Note: Since we mark recalculation of the mesh as urgent,
 		//       it will be added to the head of the background taks queue.
@@ -159,6 +157,8 @@ public class Chunk : MonoBehaviour
 			// Recalculate mesh
 			StartCoroutine( generateMesh( regenerate: true ) );
 		}
+
+		saveChunkToDisk();
 	}
 
 
@@ -185,14 +185,14 @@ public class Chunk : MonoBehaviour
 			enabled = false;
 		}
 		
-		if ( distanceToPlayerSqr > terrain.disableChunkDistanceSqr )
+		if ( distanceToPlayerSqr > terrain.disableChunkDistanceSqr && state == State.Active )
 		{
 			disableMesh();
 
 			state = State.Inactive;
 		}
 		
-		if ( distanceToPlayerSqr > terrain.destroyChunkDistanceSqr )
+		if ( distanceToPlayerSqr > terrain.destroyChunkDistanceSqr && state == State.Inactive )
 		{
 			activateNeighbours();
 
@@ -201,11 +201,24 @@ public class Chunk : MonoBehaviour
 	}
 
 
-	public void generateBlocks()
+	public void populateBlocks()
+	{
+		if ( File.Exists( "Chunks/" + position + ".chunk" ) )
+		{
+			loadChunkFromDiskTask();
+		}
+		else
+		{
+			generateBlocks();
+		}
+	}
+
+
+	void generateBlocks()
 	{
 		state = State.GeneratingBlocks;
 
-		blocks = new Block.Type[ size, size, size ];
+		blocks = new byte[ size * size * size ];
 
 		for ( int x = 0; x < size; ++x )
 		{
@@ -221,7 +234,7 @@ public class Chunk : MonoBehaviour
 				{
 					var positionZ = (float)( position.z * size + z ) / scale;
 
-					blocks[ x, y, z ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < .75f ? Block.Type.rock : Block.Type.none;
+					blocks[ x + size * ( y + size * z ) ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < .5 ? (byte)Block.Type.rock : (byte)Block.Type.none;
 
 //					blocks[ x, y, z ] = (
 //					    ( ( x == 0 ) && ( y == 0 ) && ( z == 0 ) ) ||
@@ -252,11 +265,11 @@ public class Chunk : MonoBehaviour
 	{
 		if ( state == State.GeneratingMesh )
 		{
-			Debug.LogWarning( "Already generating mesh! Exiting..." );
-			
 			yield break;
 		}
-		
+
+		if ( regenerate && state != State.Active ) yield break;
+
 		// If we are becoming active again, no need to regenerate the mesh, just reactivate
 		if ( state > State.GeneratingMesh && !regenerate )
 		{
@@ -268,7 +281,7 @@ public class Chunk : MonoBehaviour
 
 		state = State.GeneratingMesh;
 
-		Terrain.enqueueBackgroundTask( drawBlocks, regenerate );
+		terrain.chunkTasks.enqueueTask( drawBlocks, regenerate );
 
 		while ( state < State.HasMesh ) yield return null;
 
@@ -360,7 +373,7 @@ public class Chunk : MonoBehaviour
 			{
 				for ( int z = 0; z < size; ++z )
 				{
-					if ( blocks[ x, y, z ] == 0 ) continue;
+					if ( blocks[ x + size * ( y + size * z ) ] == 0 ) continue;
 
 					if ( Block.isTransparent( getBlock( x + 1, y, z ) ) ) right[ z, y, size - 1 - x ] = true;
 					if ( Block.isTransparent( getBlock( x - 1, y, z ) ) ) left[ size - 1 - z, y, x ] = true;

@@ -4,6 +4,11 @@
 public class Player : MonoBehaviour
 {
 	public Terrain terrain;
+	public KeyCode jumpKey;
+	public float jumpForce;
+	public float speed;
+	public float gravity = 20f;
+	public CharacterController characterController;
 
 
 	void Start()
@@ -46,5 +51,14 @@ public class Player : MonoBehaviour
 				chunk.setBlock( blockPositionDel - chunk.position * terrain.chunkSize, Block.Type.none );
 			}
 		}
+
+		Vector3 velocity = characterController.velocity;
+		velocity.x = velocity.z = 0f;
+		velocity += Input.GetAxis( "Horizontal" ) * transform.parent.right * speed;
+		velocity += Input.GetAxis( "Vertical" ) * transform.parent.forward * speed;
+		velocity += Time.deltaTime * gravity * Vector3.down;
+		if ( Input.GetKeyDown( jumpKey ) && characterController.isGrounded ) velocity += Vector3.up * jumpForce;
+
+		characterController.Move( velocity * Time.deltaTime );
 	}
 }

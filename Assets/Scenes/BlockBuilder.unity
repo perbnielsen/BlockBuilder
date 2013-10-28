@@ -112,9 +112,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9037140e8212f437e82305ebf56062b5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  isQuitting: 0
   player: {fileID: 354730897}
   seed: 0
-  chunkSize: 64
+  chunkSize: 32
   chunkPrefab: {fileID: 11400000, guid: 593ee089cdb3540b1a217913c94ad1f1, type: 2}
 --- !u!1 &354730893
 GameObject:
@@ -124,10 +125,8 @@ GameObject:
   serializedVersion: 4
   m_Component:
   - 4: {fileID: 354730897}
-  - 143: {fileID: 354730894}
   - 114: {fileID: 354730898}
-  - 114: {fileID: 354730899}
-  - 114: {fileID: 354730900}
+  - 143: {fileID: 354730894}
   m_Layer: 8
   m_Name: Player
   m_TagString: MainCamera
@@ -142,13 +141,13 @@ CharacterController:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 354730893}
   serializedVersion: 2
-  m_Height: 1.70000005
+  m_Height: 1.79999995
   m_Radius: .400000006
-  m_SlopeLimit: 45
-  m_StepOffset: .400000006
+  m_SlopeLimit: 0
+  m_StepOffset: 0
   m_SkinWidth: .0399999991
   m_MinMoveDistance: 0
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Center: {x: 0, y: -.100000001, z: 0}
 --- !u!4 &354730897
 Transform:
   m_ObjectHideFlags: 0
@@ -156,7 +155,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 354730893}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 8, y: 0, z: 16}
+  m_LocalPosition: {x: 0, y: 0, z: 20}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 728618783}
@@ -175,76 +174,8 @@ MonoBehaviour:
   axes: 1
   sensitivityX: 5
   sensitivityY: 0
-  minimumX: -360
-  maximumX: 360
   minimumY: 0
   maximumY: 0
---- !u!114 &354730899
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 354730893}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0ab79d7f243824f5d9826bd83522c8df, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  canControl: 1
-  useFixedUpdate: 1
-  movement:
-    maxForwardSpeed: 6
-    maxSidewaysSpeed: 6
-    maxBackwardsSpeed: 6
-    slopeSpeedMultiplier:
-      serializedVersion: 2
-      m_Curve:
-      - time: -90
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-      - time: 0
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-      - time: 90
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-    maxGroundAcceleration: 20
-    maxAirAcceleration: 15
-    gravity: 20
-    maxFallSpeed: 20
-  jumping:
-    enabled: 1
-    baseHeight: .5
-    extraHeight: 1
-    perpAmount: 0
-    steepPerpAmount: .5
-  movingPlatform:
-    enabled: 0
-    movementTransfer: 2
-  sliding:
-    enabled: 0
-    slidingSpeed: 10
-    sidewaysControl: 1
-    speedControl: 1
---- !u!114 &354730900
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 354730893}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 60bca8f58a0b8478e946e6e86658cb29, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &443801048
 GameObject:
   m_ObjectHideFlags: 0
@@ -327,7 +258,6 @@ GameObject:
   m_Component:
   - 4: {fileID: 728618783}
   - 20: {fileID: 728618784}
-  - 81: {fileID: 728618785}
   - 114: {fileID: 728618786}
   - 114: {fileID: 728618787}
   - 92: {fileID: 728618788}
@@ -378,13 +308,6 @@ Camera:
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_HDR: 0
---- !u!81 &728618785
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 728618782}
-  m_Enabled: 1
 --- !u!114 &728618786
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -399,8 +322,6 @@ MonoBehaviour:
   axes: 2
   sensitivityX: 5
   sensitivityY: 5
-  minimumX: -360
-  maximumX: 360
   minimumY: -85
   maximumY: 85
 --- !u!114 &728618787
@@ -415,6 +336,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   terrain: {fileID: 18677218}
+  jumpKey: 32
+  jumpForce: 7
+  speed: 5
+  gravity: 20
+  characterController: {fileID: 354730894}
 --- !u!92 &728618788
 Behaviour:
   m_ObjectHideFlags: 0
