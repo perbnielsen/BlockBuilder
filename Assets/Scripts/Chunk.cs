@@ -53,11 +53,11 @@ public class Chunk : MonoBehaviour
 
 	void saveChunkToDiskTask()
 	{
-		using ( var fs = File.Create("Chunks/" + position + ".chunk") )
+		using ( var file = File.Create( "Chunks/" + position + ".chunk" ) )
 		{
-			using ( var bw = new BinaryWriter(fs) )
+			using ( var binaryWriter = new BinaryWriter( file ) )
 			{
-				bw.Write( GZip.compress( blocks ) );
+				binaryWriter.Write( GZip.compress( blocks ) );
 			} 
 		}
 	}
@@ -93,9 +93,11 @@ public class Chunk : MonoBehaviour
 		}
 		catch ( FileNotFoundException )
 		{
+			Debug.LogWarning( "Chunk at " + position + " tried to load data from disk but the file was not found" );
 		}
 		catch ( DirectoryNotFoundException )
 		{
+			Debug.LogWarning( "Chunk at " + position + " tried to load data from disk but the directory was not found" );
 		}
 	}
 
@@ -213,35 +215,27 @@ public class Chunk : MonoBehaviour
 
 	void generateBlocks()
 	{
-		state = State.GeneratingBlocks;
+		const float scale = 50f;
 
+		state = State.GeneratingBlocks;
+		
 		blocks = new byte[ size * size * size ];
 
-		for ( int x = 0; x < size; ++x )
+		int i = 0;
+
+		for ( int z = 0; z < size; ++z )
 		{
-			const float scale = 50f;
-
-			var positionX = (float)( position.x * size + x ) / scale;
-
+			var positionZ = (float)( position.z * size + z ) / scale;
+			
 			for ( int y = 0; y < size; ++y )
 			{
 				var positionY = (float)( position.y * size + y ) / scale;
-
-				for ( int z = 0; z < size; ++z )
+				
+				for ( int x = 0; x < size; ++x )
 				{
-					var positionZ = (float)( position.z * size + z ) / scale;
+					var positionX = (float)( position.x * size + x ) / scale;
 
-					blocks[ x + size * ( y + size * z ) ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < .5 ? (byte)Block.Type.rock : (byte)Block.Type.none;
-
-//					blocks[ x, y, z ] = (
-//					    ( ( x == 0 ) && ( y == 0 ) && ( z == 0 ) ) ||
-//					    ( ( x == 1 ) && ( y == 0 ) && ( z == 0 ) ) ||
-//					    ( ( x == 0 ) && ( y == 1 ) && ( z == 0 ) ) ||
-//					    ( ( x == 0 ) && ( y == 2 ) && ( z == 0 ) ) ||
-//					    ( ( x == 0 ) && ( y == 0 ) && ( z == 1 ) ) ||
-//					    ( ( x == 0 ) && ( y == 0 ) && ( z == 2 ) ) ||
-//					    ( ( x == 0 ) && ( y == 0 ) && ( z == 3 ) )
-//					) ? Block.Type.dirt : Block.Type.none;
+					blocks[ i++ ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < 0f ? (byte)Block.Type.rock : (byte)Block.Type.none;
 				}
 			}
 		}

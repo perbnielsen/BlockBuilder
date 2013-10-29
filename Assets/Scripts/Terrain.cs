@@ -11,12 +11,12 @@ public class Terrain : MonoBehaviour
 	public int seed;
 	public int chunkSize;
 	public Chunk chunkPrefab;
-	float _displayChunkDistance;
+	public float _displayChunkDistance;
 	float _displayChunkDistanceSqr;
 	float _disableChunkDistanceSqr;
 	float _destroyChunkDistanceSqr;
-	public TaskQueue chunkTasks = new TaskQueue();
-	public TaskQueue fileTasks = new TaskQueue();
+	public readonly TaskQueue chunkTasks = new TaskQueue();
+	public readonly TaskQueue fileTasks = new TaskQueue();
 	readonly Dictionary< Position3, Chunk > chunks = new Dictionary< Position3, Chunk >();
 
 
@@ -92,7 +92,7 @@ public class Terrain : MonoBehaviour
 	{
 		if ( !Directory.Exists( "Chunks" ) ) Directory.CreateDirectory( "Chunks" );
 
-		displayChunkDistance = 96;
+		displayChunkDistance = _displayChunkDistance;
 
 		getChunkAtCoordiate( player.transform.position );
 	}

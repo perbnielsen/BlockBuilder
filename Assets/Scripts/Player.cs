@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using System;
 
 
 public class Player : MonoBehaviour
@@ -30,8 +29,7 @@ public class Player : MonoBehaviour
 			{
 				Position3 blockPositionAdd = hit.point + hit.normal / 2f;
 
-				if ( Physics.OverlapSphere( (Vector3)blockPositionAdd + ( Vector3.one / 2f ), 0.87f, 1 << 8 ).Length == 0 )
-//				if ( !Physics.CheckSphere( (Vector3)blockPositionAdd + ( Vector3.one / 2f ), 0.7f, 1 << 8 ) )
+				if ( !playerCollideWithBlockAt( blockPositionAdd ) )
 				{
 					Chunk chunk = terrain.getChunkAtCoordiate( blockPositionAdd );
 
@@ -40,7 +38,7 @@ public class Player : MonoBehaviour
 			}
 		}
 	
-		if ( Input.GetMouseButton( 1 ) ) // Right mouse button
+		if ( Input.GetMouseButtonDown( 1 ) ) // Right mouse button
 		{
 			RaycastHit hit;
 
@@ -55,14 +53,26 @@ public class Player : MonoBehaviour
 		}
 
 		Vector3 velocity = characterController.velocity;
+
 		velocity.x = velocity.z = 0f;
+
 		velocity += Input.GetAxis( "Horizontal" ) * transform.parent.right * speed;
 		velocity += Input.GetAxis( "Vertical" ) * transform.parent.forward * speed;
+
 		velocity += Time.deltaTime * gravity * Vector3.down;
+
 		if ( Input.GetKeyDown( jumpKey ) && characterController.isGrounded ) velocity += Vector3.up * jumpForce;
 
 		velocity = Vector3.ClampMagnitude( velocity, maxSpeed );
 
 		characterController.Move( velocity * Time.deltaTime );
+	}
+
+
+	bool playerCollideWithBlockAt( Vector3 blockPosition )
+	{
+		Vector3 distance = transform.parent.position - ( blockPosition + Vector3.one / 2f );
+
+		return ( Mathf.Abs( distance.x ) < 0.9f && Mathf.Abs( distance.y ) < 1.4f && Mathf.Abs( distance.z ) < 0.9f );
 	}
 }
