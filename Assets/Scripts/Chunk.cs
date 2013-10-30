@@ -26,6 +26,7 @@ public class Chunk : MonoBehaviour
 	readonly List<Vector3> vertices = new List<Vector3>();
 	readonly List<int> triangles = new List<int>();
 	readonly List<Vector2> uvs = new List<Vector2>();
+	static int lastFrameChunkWasAdded;
 
 
 	enum State : byte
@@ -123,7 +124,7 @@ public class Chunk : MonoBehaviour
 
 		if ( blocks == null ) return Block.Type.none;
 
-		return (Block.Type)blocks[ x + size * ( y + size * z ) ];
+		return (Block.Type)blocks[ x + size * (y + size * z) ];
 	}
 
 
@@ -132,13 +133,13 @@ public class Chunk : MonoBehaviour
 		if ( state < State.HasBlocks ) return;
 
 		// Set block 
-		blocks[ blockPosition.x + size * ( blockPosition.y + size * blockPosition.z ) ] = (byte)blockType;
+		blocks[ blockPosition.x + size * (blockPosition.y + size * blockPosition.z) ] = (byte)blockType;
 
 		// Note: Since we mark recalculation of the mesh as urgent,
 		//       it will be added to the head of the background taks queue.
 		//       So the order they are executed in, is reverse of the order in which they are added.
 
-		if ( Block.isTransparent( blockType ) )
+		if ( !Block.isTransparent( blockType ) )
 		{
 			// Recalculate mesh
 			StartCoroutine( generateMesh( regenerate: true ) );
@@ -153,7 +154,7 @@ public class Chunk : MonoBehaviour
 		if ( blockPosition.y == size - 1 && neighbourUp != null ) neighbourUp.StartCoroutine( neighbourUp.generateMesh( regenerate: true ) );
 		if ( blockPosition.z == size - 1 && neighbourForward != null ) neighbourForward.StartCoroutine( neighbourForward.generateMesh( regenerate: true ) );
 
-		if ( !Block.isTransparent( blockType ) )
+		if ( Block.isTransparent( blockType ) )
 		{
 			// Recalculate mesh
 			StartCoroutine( generateMesh( regenerate: true ) );
@@ -174,27 +175,27 @@ public class Chunk : MonoBehaviour
 	void Update()
 	{
 		if ( state < State.HasBlocks ) return;
-
-		var distanceToPlayerSqr = ( terrain.player.position - center ).sqrMagnitude;
-
+	
+		var distanceToPlayerSqr = (terrain.player.position - center).sqrMagnitude;
+	
 		if ( distanceToPlayerSqr < terrain.displayChunkDistanceSqr )
 		{
 			generateNeighbours();
-
+	
 			StartCoroutine( generateMesh() );
-
+	
 			enabled = false;
 		}
-
+	
 		if ( distanceToPlayerSqr > terrain.disableChunkDistanceSqr && state > State.HasMesh )
 		{
 			disableMesh();
 		}
-
+	
 		if ( distanceToPlayerSqr > terrain.destroyChunkDistanceSqr )
 		{
 			activateNeighbours();
-
+	
 			terrain.deleteChunk( this );
 		}
 	}
@@ -225,17 +226,23 @@ public class Chunk : MonoBehaviour
 
 		for ( int z = 0; z < size; ++z )
 		{
-			var positionZ = (float)( position.z * size + z ) / scale;
+			var positionZ = (float)(position.z * size + z) / scale;
 			
 			for ( int y = 0; y < size; ++y )
 			{
-				var positionY = (float)( position.y * size + y ) / scale;
+				var positionY = (float)(position.y * size + y) / scale;
+
 				
 				for ( int x = 0; x < size; ++x )
 				{
-					var positionX = (float)( position.x * size + x ) / scale;
+					var positionX = (float)(position.x * size + x) / scale;
 
-					blocks[ i++ ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < 0f ? (byte)Block.Type.rock : (byte)Block.Type.none;
+//					blocks[ i++ ] = positionY < (SimplexNoise.noise( positionX, positionZ )) ? (byte)Block.Type.rock : (byte)Block.Type.none;
+
+//					blocks[ i++ ] = SimplexNoise.Noise.Generate( positionX, positionY, positionZ ) < 0f ? (byte)Block.Type.rock : (byte)Block.Type.none;
+
+//					blocks[ i++ ] = positionY < SimplexNoise.noise( positionX, positionY, positionZ ) ? (byte)Block.Type.rock : (byte)Block.Type.none;
+					blocks[ i++ ] = positionY < Noise.Generate( positionX, positionY, positionZ ) ? (byte)Block.Type.rock : (byte)Block.Type.none;
 				}
 			}
 		}
@@ -248,7 +255,6 @@ public class Chunk : MonoBehaviour
 	{
 		renderer.enabled = false;
 		meshCollider.enabled = false;
-
 	}
 
 
@@ -262,7 +268,7 @@ public class Chunk : MonoBehaviour
 		if ( regenerate && state != State.Active ) yield break;
 
 		// If we are becoming active again, no need to regenerate the mesh, just reactivate
-		if ( state > State.GeneratingMesh && !regenerate )
+		if ( state >= State.HasMesh && !regenerate )
 		{
 			renderer.enabled = true;
 			meshCollider.enabled = true;
@@ -270,11 +276,18 @@ public class Chunk : MonoBehaviour
 			yield break;
 		}
 
-		state = State.GeneratingMesh;
-
-		terrain.chunkTasks.enqueueTask( drawBlocks, regenerate );
-
-		while ( state < State.HasMesh ) yield return null;
+		if ( regenerate )
+		{
+			drawBlocks();
+		}
+		else
+		{
+			state = State.GeneratingMesh;
+			
+			terrain.chunkTasks.enqueueTask( drawBlocks );
+			
+			while ( state < State.HasMesh ) yield return null;
+		}
 
 		if ( triangles.Count == 0 )
 		{
@@ -282,6 +295,10 @@ public class Chunk : MonoBehaviour
 		}
 		else
 		{
+			// Smoothe the physics calls impact by only calling it once per frame
+			while ( lastFrameChunkWasAdded == Time.frameCount ) yield return null;
+			lastFrameChunkWasAdded = Time.frameCount;
+
 			var mesh = new Mesh();
 			mesh.vertices = vertices.ToArray();
 			mesh.triangles = triangles.ToArray();
@@ -364,7 +381,7 @@ public class Chunk : MonoBehaviour
 			{
 				for ( int z = 0; z < size; ++z )
 				{
-					if ( blocks[ x + size * ( y + size * z ) ] == 0 ) continue;
+					if ( blocks[ x + size * (y + size * z) ] == 0 ) continue;
 
 					if ( Block.isTransparent( getBlock( x + 1, y, z ) ) ) right[ z, y, size - 1 - x ] = true;
 					if ( Block.isTransparent( getBlock( x - 1, y, z ) ) ) left[ size - 1 - z, y, x ] = true;

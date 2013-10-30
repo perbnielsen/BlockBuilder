@@ -27,8 +27,8 @@ public class Terrain : MonoBehaviour
 		{
 			_displayChunkDistance = value;
 			_displayChunkDistanceSqr = displayChunkDistance * displayChunkDistance;
-			_disableChunkDistanceSqr = ( displayChunkDistance + chunkSize * 1 ) * ( displayChunkDistance + chunkSize * 1 );
-			_destroyChunkDistanceSqr = ( displayChunkDistance + chunkSize * 2 ) * ( displayChunkDistance + chunkSize * 2 );
+			_disableChunkDistanceSqr = (displayChunkDistance + chunkSize * 0) * (displayChunkDistance + chunkSize * 0);
+			_destroyChunkDistanceSqr = (displayChunkDistance + chunkSize * 1) * (displayChunkDistance + chunkSize * 1);
 		}
 	}
 

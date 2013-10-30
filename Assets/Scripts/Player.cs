@@ -73,6 +73,6 @@ public class Player : MonoBehaviour
 	{
 		Vector3 distance = transform.parent.position - ( blockPosition + Vector3.one / 2f );
 
-		return ( Mathf.Abs( distance.x ) < 0.9f && Mathf.Abs( distance.y ) < 1.4f && Mathf.Abs( distance.z ) < 0.9f );
+		return ( Mathf.Abs( distance.x ) < 0.9f && Mathf.Abs( distance.y ) < 1.45f && Mathf.Abs( distance.z ) < 0.9f );
 	}
 }
