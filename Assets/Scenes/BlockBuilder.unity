@@ -156,7 +156,7 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 354730893}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 5, y: 100, z: 25}
+  m_LocalPosition: {x: -7, y: 50, z: 33}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 728618783}
@@ -350,7 +350,7 @@ MonoBehaviour:
   jumpForce: 7
   speed: 5
   gravity: 20
-  maxSpeed: 20
+  maxSpeed: 0
   characterController: {fileID: 354730894}
   chunk: {fileID: 0}
 --- !u!92 &728618788

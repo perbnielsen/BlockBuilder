@@ -84,12 +84,12 @@ public class Terrain : MonoBehaviour
 		List<Vector3> vertices = new List<Vector3>();
 		List<int> triangles = new List<int>();
 		List<Vector2> uvs = new List<Vector2>();
-
+	
 		chunk.generateMesh( Position3.zero, ref vertices, ref triangles, ref uvs );
-
+	
 		if ( triangles.Count > 0 ) runOnePerFrameOnMainThread.Add( () =>
 			{
-//				Debug.Log( "setting collision mesh for " + chunk.position + " on frame " + Time.frameCount );
+				//				Debug.Log( "setting collision mesh for " + chunk.position + " on frame " + Time.frameCount );
 				chunk.setCollisionMesh( vertices.ToArray(), triangles.ToArray() );
 			} );
 	}, 1 );
@@ -183,7 +183,7 @@ public class Terrain : MonoBehaviour
 
 		chunksNeedingBlocks.reprioritise();
 		chunksNeedingMesh.reprioritise();
-		chunksNeedingCollisionMesh.reprioritise();
+//		chunksNeedingCollisionMesh.reprioritise();
 
 		runMainThreadTask();
 		runOnePerFrameOnMainThreadTask();
@@ -217,6 +217,7 @@ public class Terrain : MonoBehaviour
 				runOnMainThread.RemoveAt( 0 );
 
 				if ( task != null ) task();
+				else Debug.Log( "null on task list???" );
 			}
 		}
 	}
@@ -232,7 +233,6 @@ public class Terrain : MonoBehaviour
 			{
 				task = runOnePerFrameOnMainThread[ 0 ];
 				runOnePerFrameOnMainThread.RemoveAt( 0 );
-				if ( task != null ) task();
 			}
 		}
 

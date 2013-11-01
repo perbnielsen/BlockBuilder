@@ -217,7 +217,8 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		renderer.enabled = false;
 		meshCollider.enabled = false;
 	}
-	//	IEnumerator generateMesh( bool regenerate = false )
+
+
 	public void setMesh( Vector3[] vertices, int[] triangles, Vector2[] uvs )
 	{
 		Destroy( meshFilter.mesh );
@@ -233,8 +234,10 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		mesh.RecalculateNormals();
 
 		meshFilter.mesh = mesh;
+//		meshCollider.sharedMesh = mesh;
 
 		renderer.enabled = true;
+//		meshCollider.enabled = true;
 	}
 
 
@@ -259,6 +262,8 @@ public class Chunk : MonoBehaviour, IPriorityTask
 
 	void OnDestroy()
 	{
+		Debug.Log( "Destroying chunk at " + position );
+
 		if ( !terrain.isQuitting ) destroyMesh();
 	}
 
@@ -288,7 +293,6 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		{
 			if ( hasAllNeighbours() )
 			{
-//				Debug.Log( position + " has a full house!" );
 				terrain.chunksNeedingMesh.enqueueTask( this );
 				terrain.chunksNeedingCollisionMesh.enqueueTask( this );
 			}
@@ -363,17 +367,6 @@ public class Chunk : MonoBehaviour, IPriorityTask
 			neighbourBack.neighbourForward = this;
 			neighbourBack.neighbourAdded();
 		}
-	}
-
-
-	void activateNeighbours()
-	{
-		if ( neighbourRight != null ) neighbourRight.enabled = true;
-		if ( neighbourLeft != null ) neighbourLeft.enabled = true;
-		if ( neighbourUp != null ) neighbourUp.enabled = true;
-		if ( neighbourDown != null ) neighbourDown.enabled = true;
-		if ( neighbourForward != null ) neighbourForward.enabled = true;
-		if ( neighbourBack != null ) neighbourBack.enabled = true;
 	}
 
 
@@ -471,9 +464,9 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		int index = vertices.Count;
 
 		vertices.Add( origin );
-		vertices.Add( origin + up );
-		vertices.Add( origin + up + right );
-		vertices.Add( origin + right );
+		vertices.Add( origin + up * 1.0001f );
+		vertices.Add( origin + (up + right) * 1.0001f );
+		vertices.Add( origin + right * 1.0001f );
 
 		if ( uvs != null )
 		{
