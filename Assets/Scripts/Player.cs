@@ -11,6 +11,7 @@ public class Player : MonoBehaviour
 	public float maxSpeed = 20f;
 	public CharacterController characterController;
 	public Chunk chunk;
+	public Light torch;
 
 
 	void Start()
@@ -51,6 +52,19 @@ public class Player : MonoBehaviour
 
 				chunk.setBlock( blockPositionDel - chunk.position * terrain.chunkSize, Block.Type.none );
 			}
+		}
+
+		if ( Input.GetKeyDown( KeyCode.T ) )
+		{
+			torch.enabled = !torch.enabled;
+		}
+
+		if ( Input.GetKeyDown( KeyCode.E ) )
+		{
+			Transform newTorch = Instantiate( torch.transform ) as Transform;
+			newTorch.GetComponent< Light >().enabled = true;
+			newTorch.position = torch.transform.position;
+			newTorch.parent = transform.parent.parent;
 		}
 
 		Vector3 velocity = characterController.velocity;

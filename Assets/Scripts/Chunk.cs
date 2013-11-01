@@ -31,8 +31,6 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		Vector3 fromPlayerToChunk = center - terrain.player.transform.position;
 		return (Vector3.Dot( fromPlayerToChunk.normalized, terrain.player.transform.forward.normalized ) + 1f) / fromPlayerToChunk.sqrMagnitude;
 	}
-	//
-	static int lastFrameChunkWasAdded;
 	//	enum State : byte
 	//	{
 	//		Initialising,
@@ -136,6 +134,8 @@ public class Chunk : MonoBehaviour, IPriorityTask
 	{
 //		if ( state < State.HasBlocks ) return;
 
+		if ( blocks == null ) return;
+
 		// Set block 
 		blocks[ blockPosition.x + size * (blockPosition.y + size * blockPosition.z) ] = (byte)blockType;
 
@@ -143,26 +143,26 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		//       it will be added to the head of the background taks queue.
 		//       So the order they are executed in, is reverse of the order in which they are added.
 
-//		if ( !Block.isTransparent( blockType ) )
-//		{
-//			// Recalculate mesh
-//			StartCoroutine( generateMesh( regenerate: true ) );
-//		}
-//
-//		// Update any neighbour chunk that might be affected
-//		if ( blockPosition.x == 0 && neighbourLeft != null ) neighbourLeft.StartCoroutine( neighbourLeft.generateMesh( regenerate: true ) );
-//		if ( blockPosition.y == 0 && neighbourDown != null ) neighbourDown.StartCoroutine( neighbourDown.generateMesh( regenerate: true ) );
-//		if ( blockPosition.z == 0 && neighbourBack != null ) neighbourBack.StartCoroutine( neighbourBack.generateMesh( regenerate: true ) );
-//
-//		if ( blockPosition.x == size - 1 && neighbourRight != null ) neighbourRight.StartCoroutine( neighbourRight.generateMesh( regenerate: true ) );
-//		if ( blockPosition.y == size - 1 && neighbourUp != null ) neighbourUp.StartCoroutine( neighbourUp.generateMesh( regenerate: true ) );
-//		if ( blockPosition.z == size - 1 && neighbourForward != null ) neighbourForward.StartCoroutine( neighbourForward.generateMesh( regenerate: true ) );
-//
-//		if ( Block.isTransparent( blockType ) )
-//		{
-//			// Recalculate mesh
-//			StartCoroutine( generateMesh( regenerate: true ) );
-//		}
+		if ( !Block.isTransparent( blockType ) )
+		{
+			// Recalculate mesh
+			terrain.chunksNeedingMesh.enqueueTask( this );
+		}
+
+		// Update any neighbour chunk that might be affected
+		if ( blockPosition.x == 0 && neighbourLeft != null ) neighbourLeft.neighbourBlocksHaveChanged();
+		if ( blockPosition.y == 0 && neighbourDown != null ) neighbourDown.neighbourBlocksHaveChanged();
+		if ( blockPosition.z == 0 && neighbourBack != null ) neighbourBack.neighbourBlocksHaveChanged();
+
+		if ( blockPosition.x == size - 1 && neighbourRight != null ) neighbourRight.neighbourBlocksHaveChanged();
+		if ( blockPosition.y == size - 1 && neighbourUp != null ) neighbourUp.neighbourBlocksHaveChanged();
+		if ( blockPosition.z == size - 1 && neighbourForward != null ) neighbourForward.neighbourBlocksHaveChanged();
+
+		if ( Block.isTransparent( blockType ) )
+		{
+			// Recalculate mesh
+			terrain.chunksNeedingMesh.enqueueTask( this );
+		}
 
 		saveChunkToDisk();
 	}
@@ -221,48 +221,34 @@ public class Chunk : MonoBehaviour, IPriorityTask
 
 	public void setMesh( Vector3[] vertices, int[] triangles, Vector2[] uvs )
 	{
-		Destroy( meshFilter.mesh );
+		destroyMesh();
 
-		if ( triangles.Length == 0 ) return;
+		if ( triangles.Length == 0 )
+		{
+			disableMesh();
+			return;
+		}
 
 		var mesh = new Mesh();
+
 		mesh.vertices = vertices;
 		mesh.triangles = triangles;
 		mesh.uv = uvs;
 
-		mesh.RecalculateBounds();
 		mesh.RecalculateNormals();
+		mesh.RecalculateBounds();
 
 		meshFilter.mesh = mesh;
-//		meshCollider.sharedMesh = mesh;
-
-		renderer.enabled = true;
-//		meshCollider.enabled = true;
-	}
-
-
-	public void setCollisionMesh( Vector3[] vertices, int[] triangles )
-	{
-		Destroy( meshCollider.sharedMesh );
-
-		if ( triangles.Length == 0 ) return;
-
-		var mesh = new Mesh();
-		mesh.vertices = vertices;
-		mesh.triangles = triangles;
-
-		mesh.RecalculateBounds();  // Todo: Needed for collision mesh?
-		mesh.RecalculateNormals(); // Todo: Needed for collision mesh?
-
 		meshCollider.sharedMesh = mesh;
 
+		renderer.enabled = true;
 		meshCollider.enabled = true;
 	}
 
 
 	void OnDestroy()
 	{
-		Debug.Log( "Destroying chunk at " + position );
+//		Debug.Log( "Destroying chunk at " + position );
 
 		if ( !terrain.isQuitting ) destroyMesh();
 	}
@@ -277,26 +263,14 @@ public class Chunk : MonoBehaviour, IPriorityTask
 
 	bool hasAllNeighbours()
 	{
-		return (null != neighbourRight)
-		&& (null != neighbourLeft)
-		&& (null != neighbourUp)
-		&& (null != neighbourDown)
-		&& (null != neighbourForward)
-		&& (null != neighbourBack);
+		return (neighbourRight != null) && (neighbourLeft != null) && (neighbourUp != null) && (neighbourDown != null) && (neighbourForward != null) && (neighbourBack != null);
 	}
 
 
-	public void neighbourAdded()
+	public void neighbourBlocksHaveChanged()
 	{
-//		Debug.Log( position + " was poked" );
-//		if ( meshFilter.mesh == null )
-		{
-			if ( hasAllNeighbours() )
-			{
-				terrain.chunksNeedingMesh.enqueueTask( this );
-				terrain.chunksNeedingCollisionMesh.enqueueTask( this );
-			}
-		}
+//		Debug.Log( position + " was nudged" );
+		if ( hasAllNeighbours() && meshFilter.mesh != null ) terrain.chunksNeedingMesh.enqueueTask( this );
 	}
 
 
@@ -315,7 +289,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		else
 		{
 			neighbourRight.neighbourLeft = this;
-			neighbourRight.neighbourAdded();
+			neighbourRight.neighbourBlocksHaveChanged();
 		}
 
 		if ( null == neighbourLeft )
@@ -325,7 +299,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		else
 		{
 			neighbourLeft.neighbourRight = this;
-			neighbourLeft.neighbourAdded();
+			neighbourLeft.neighbourBlocksHaveChanged();
 		}
 
 		if ( null == neighbourUp )
@@ -335,7 +309,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		else
 		{
 			neighbourUp.neighbourDown = this;
-			neighbourUp.neighbourAdded();
+			neighbourUp.neighbourBlocksHaveChanged();
 		}
 
 		if ( null == neighbourDown )
@@ -345,7 +319,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		else
 		{
 			neighbourDown.neighbourUp = this;
-			neighbourDown.neighbourAdded();
+			neighbourDown.neighbourBlocksHaveChanged();
 		}
 
 		if ( null == neighbourForward )
@@ -355,7 +329,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		else
 		{
 			neighbourForward.neighbourBack = this;
-			neighbourForward.neighbourAdded();
+			neighbourForward.neighbourBlocksHaveChanged();
 		}
 
 		if ( null == neighbourBack )
@@ -365,12 +339,28 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		else
 		{
 			neighbourBack.neighbourForward = this;
-			neighbourBack.neighbourAdded();
+			neighbourBack.neighbourBlocksHaveChanged();
 		}
 	}
 
 
-	public void generateMesh( Position3 positionRelativeToPlayer, ref List<Vector3> vertices, ref List<int> triangles, ref List<Vector2> uvs )
+	public void buildMesh()
+	{
+		List<Vector3> vertices = new List<Vector3>();
+		List<int> triangles = new List<int>();
+		List<Vector2> uvs = new List<Vector2>();
+
+		generateMesh( ref vertices, ref triangles, ref uvs );
+
+		var vertexArray = vertices.ToArray();
+		var triangleArray = triangles.ToArray();
+		var uvArray = uvs.ToArray();
+
+		if ( triangles.Count > 0 ) terrain.runOnePerFrameOnMainThread.Add( () => setMesh( vertexArray, triangleArray, uvArray ) );
+	}
+
+
+	public void generateMesh( ref List<Vector3> vertices, ref List<int> triangles, ref List<Vector2> uvs )
 	{
 		var right = new bool[size, size, size];
 		var left = new bool[size, size, size];
@@ -387,22 +377,22 @@ public class Chunk : MonoBehaviour, IPriorityTask
 				{
 					if ( blocks[ x + size * (y + size * z) ] == 0 ) continue;
 
-					if ( positionRelativeToPlayer.x >= 0f && Block.isTransparent( getBlock( x + 1, y, z ) ) ) right[ z, y, size - 1 - x ] = true;
-					if ( positionRelativeToPlayer.x <= 0f && Block.isTransparent( getBlock( x - 1, y, z ) ) ) left[ size - 1 - z, y, x ] = true;
-					if ( positionRelativeToPlayer.y >= 0f && Block.isTransparent( getBlock( x, y + 1, z ) ) ) top[ x, z, size - 1 - y ] = true;
-					if ( positionRelativeToPlayer.y <= 0f && Block.isTransparent( getBlock( x, y - 1, z ) ) ) bottom[ x, size - 1 - z, y ] = true;
-					if ( positionRelativeToPlayer.z >= 0f && Block.isTransparent( getBlock( x, y, z + 1 ) ) ) front[ size - 1 - x, y, size - 1 - z ] = true;
-					if ( positionRelativeToPlayer.z <= 0f && Block.isTransparent( getBlock( x, y, z - 1 ) ) ) back[ x, y, z ] = true;
+					if ( Block.isTransparent( getBlock( x + 1, y, z ) ) ) right[ z, y, size - 1 - x ] = true;
+					if ( Block.isTransparent( getBlock( x - 1, y, z ) ) ) left[ size - 1 - z, y, x ] = true;
+					if ( Block.isTransparent( getBlock( x, y + 1, z ) ) ) top[ x, z, size - 1 - y ] = true;
+					if ( Block.isTransparent( getBlock( x, y - 1, z ) ) ) bottom[ x, size - 1 - z, y ] = true;
+					if ( Block.isTransparent( getBlock( x, y, z + 1 ) ) ) front[ size - 1 - x, y, size - 1 - z ] = true;
+					if ( Block.isTransparent( getBlock( x, y, z - 1 ) ) ) back[ x, y, z ] = true;
 				}
 			}
 		}
 
-		if ( positionRelativeToPlayer.x >= 0f ) drawFaces( ref right, Vector3.right * size, Vector3.forward, Vector3.up, Vector3.left, ref vertices, ref triangles, ref uvs );
-		if ( positionRelativeToPlayer.x <= 0f ) drawFaces( ref left, Vector3.forward * size, Vector3.back, Vector3.up, Vector3.right, ref vertices, ref triangles, ref uvs );
-		if ( positionRelativeToPlayer.y >= 0f ) drawFaces( ref top, Vector3.up * size, Vector3.right, Vector3.forward, Vector3.down, ref vertices, ref triangles, ref uvs );
-		if ( positionRelativeToPlayer.y <= 0f ) drawFaces( ref bottom, Vector3.forward * size, Vector3.right, Vector3.back, Vector3.up, ref vertices, ref triangles, ref uvs );
-		if ( positionRelativeToPlayer.z >= 0f ) drawFaces( ref front, Vector3.forward * size + Vector3.right * size, Vector3.left, Vector3.up, Vector3.back, ref vertices, ref triangles, ref uvs );
-		if ( positionRelativeToPlayer.z <= 0f ) drawFaces( ref back, Vector3.zero, Vector3.right, Vector3.up, Vector3.forward, ref vertices, ref triangles, ref uvs );
+		drawFaces( ref right, Vector3.right * size, Vector3.forward, Vector3.up, Vector3.left, ref vertices, ref triangles, ref uvs );
+		drawFaces( ref left, Vector3.forward * size, Vector3.back, Vector3.up, Vector3.right, ref vertices, ref triangles, ref uvs );
+		drawFaces( ref top, Vector3.up * size, Vector3.right, Vector3.forward, Vector3.down, ref vertices, ref triangles, ref uvs );
+		drawFaces( ref bottom, Vector3.forward * size, Vector3.right, Vector3.back, Vector3.up, ref vertices, ref triangles, ref uvs );
+		drawFaces( ref front, Vector3.forward * size + Vector3.right * size, Vector3.left, Vector3.up, Vector3.back, ref vertices, ref triangles, ref uvs );
+		drawFaces( ref back, Vector3.zero, Vector3.right, Vector3.up, Vector3.forward, ref vertices, ref triangles, ref uvs );
 	}
 
 

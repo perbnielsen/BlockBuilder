@@ -37,6 +37,9 @@ updateBlocks()
 */
 public class Terrain : MonoBehaviour
 {
+	public readonly List< Action > runOnePerFrameOnMainThread = new List< Action >();
+	public readonly List< Action > runOnMainThread = new List< Action >();
+	//
 	public bool isQuitting;
 	public Player player;
 	public int seed;
@@ -55,48 +58,14 @@ public class Terrain : MonoBehaviour
 	//
 	readonly PrioryTaskQueue<Chunk> chunksNeedingBlocks = new PrioryTaskQueue< Chunk >( chunk =>
 	{
-		chunk.generateBlocks();
+		chunk.populateBlocks();
 
-		runOnMainThread.Add( chunk.generateNeighbours );
+		chunk.terrain.runOnMainThread.Add( chunk.generateNeighbours );
 	}, 1 );
 	//
 	//
-	public readonly PrioryTaskQueue<Chunk> chunksNeedingMesh = new PrioryTaskQueue< Chunk >( chunk =>
-	{
-		List<Vector3> vertices = new List<Vector3>();
-		List<int> triangles = new List<int>();
-		List<Vector2> uvs = new List<Vector2>();
-
-		var positionRelativeToPlayer = chunk.terrain.player.chunk.position - chunk.position;
-
-		chunk.generateMesh( positionRelativeToPlayer, ref vertices, ref triangles, ref uvs );
-
-		if ( triangles.Count > 0 ) runOnMainThread.Add( () =>
-			{
-//				Debug.Log( "setting mesh for " + chunk.position + " on frame " + Time.frameCount );
-				chunk.setMesh( vertices.ToArray(), triangles.ToArray(), uvs.ToArray() );
-			} );
-	}, 1 );
+	public readonly PrioryTaskQueue<Chunk> chunksNeedingMesh = new PrioryTaskQueue< Chunk >( chunk => chunk.buildMesh(), 1 );
 	//
-	//
-	public readonly PrioryTaskQueue<Chunk> chunksNeedingCollisionMesh = new PrioryTaskQueue< Chunk >( chunk =>
-	{
-		List<Vector3> vertices = new List<Vector3>();
-		List<int> triangles = new List<int>();
-		List<Vector2> uvs = new List<Vector2>();
-	
-		chunk.generateMesh( Position3.zero, ref vertices, ref triangles, ref uvs );
-	
-		if ( triangles.Count > 0 ) runOnePerFrameOnMainThread.Add( () =>
-			{
-				//				Debug.Log( "setting collision mesh for " + chunk.position + " on frame " + Time.frameCount );
-				chunk.setCollisionMesh( vertices.ToArray(), triangles.ToArray() );
-			} );
-	}, 1 );
-	//
-	//
-	static readonly List< Action > runOnePerFrameOnMainThread = new List< Action >();
-	static readonly List< Action > runOnMainThread = new List< Action >();
 	//
 	public float displayChunkDistance {
 		get { return _displayChunkDistance; }
@@ -183,7 +152,6 @@ public class Terrain : MonoBehaviour
 
 		chunksNeedingBlocks.reprioritise();
 		chunksNeedingMesh.reprioritise();
-//		chunksNeedingCollisionMesh.reprioritise();
 
 		runMainThreadTask();
 		runOnePerFrameOnMainThreadTask();
