@@ -1,27 +1,104 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.IO;
-using System.Collections;
+using System;
 
 
+/*
+ * 
+spawned()
+
+	updateBlocks()
+
+	if ( should be visible ) spawn all neighbours
+
+
+
+neighbourBlocksHaveChanged()
+	
+	if ( all neighbours exist and should be visible ) generate visual mesh
+
+
+
+playerMoved()
+
+	regenerate visual mesh 
+
+
+
+updateBlocks()
+
+	generateBlocks
+
+	generate collision mesh
+
+	send all existing neighbours neighbourBlocksHaveChanged
+	
+*/
 public class Terrain : MonoBehaviour
 {
 	public bool isQuitting;
-	public Transform player;
+	public Player player;
 	public int seed;
 	public int chunkSize;
 	public Chunk chunkPrefab;
+	//
 	public float _displayChunkDistance;
 	float _displayChunkDistanceSqr;
 	float _disableChunkDistanceSqr;
 	float _destroyChunkDistanceSqr;
+	//
 	public readonly TaskQueue chunkTasks = new TaskQueue();
 	public readonly TaskQueue fileTasks = new TaskQueue();
+	//
 	readonly Dictionary< Position3, Chunk > chunks = new Dictionary< Position3, Chunk >();
-
-
-	public float displayChunkDistance
+	//
+	readonly PrioryTaskQueue<Chunk> chunksNeedingBlocks = new PrioryTaskQueue< Chunk >( chunk =>
 	{
+		chunk.generateBlocks();
+
+		runOnMainThread.Add( chunk.generateNeighbours );
+	}, 1 );
+	//
+	//
+	public readonly PrioryTaskQueue<Chunk> chunksNeedingMesh = new PrioryTaskQueue< Chunk >( chunk =>
+	{
+		List<Vector3> vertices = new List<Vector3>();
+		List<int> triangles = new List<int>();
+		List<Vector2> uvs = new List<Vector2>();
+
+		var positionRelativeToPlayer = chunk.terrain.player.chunk.position - chunk.position;
+
+		chunk.generateMesh( positionRelativeToPlayer, ref vertices, ref triangles, ref uvs );
+
+		if ( triangles.Count > 0 ) runOnMainThread.Add( () =>
+			{
+//				Debug.Log( "setting mesh for " + chunk.position + " on frame " + Time.frameCount );
+				chunk.setMesh( vertices.ToArray(), triangles.ToArray(), uvs.ToArray() );
+			} );
+	}, 1 );
+	//
+	//
+	public readonly PrioryTaskQueue<Chunk> chunksNeedingCollisionMesh = new PrioryTaskQueue< Chunk >( chunk =>
+	{
+		List<Vector3> vertices = new List<Vector3>();
+		List<int> triangles = new List<int>();
+		List<Vector2> uvs = new List<Vector2>();
+
+		chunk.generateMesh( Position3.zero, ref vertices, ref triangles, ref uvs );
+
+		if ( triangles.Count > 0 ) runOnePerFrameOnMainThread.Add( () =>
+			{
+//				Debug.Log( "setting collision mesh for " + chunk.position + " on frame " + Time.frameCount );
+				chunk.setCollisionMesh( vertices.ToArray(), triangles.ToArray() );
+			} );
+	}, 1 );
+	//
+	//
+	static readonly List< Action > runOnePerFrameOnMainThread = new List< Action >();
+	static readonly List< Action > runOnMainThread = new List< Action >();
+	//
+	public float displayChunkDistance {
 		get { return _displayChunkDistance; }
 		set
 		{
@@ -51,16 +128,22 @@ public class Terrain : MonoBehaviour
 	Chunk createChunk( Position3 position )
 	{
 		if ( isQuitting ) return null;
+
 //		Debug.Log( "Creating chunk at " + position );
+
 		var chunk = (Chunk)Instantiate( chunkPrefab, position * chunkSize, Quaternion.identity );
+
 		chunk.transform.parent = transform;
 		chunk.terrain = this;
 		chunk.size = chunkSize;
 		chunk.position = position;
+		chunk.center = chunk.transform.position + Vector3.one * chunkSize / 2f;
+		chunk.meshFilter = chunk.GetComponent< MeshFilter >();
+		chunk.meshCollider = chunk.GetComponent< MeshCollider >();
 
 		chunks.Add( position, chunk );
 
-		chunkTasks.enqueueTask( chunk.populateBlocks );
+		chunksNeedingBlocks.enqueueTask( chunk );
 
 		return chunk;
 	}
@@ -83,8 +166,6 @@ public class Terrain : MonoBehaviour
 		chunks.Remove( chunk.position );
 
 		Destroy( chunk.gameObject );
-
-		if ( chunks.Count == 0 ) getChunkAtCoordiate( player.transform.position );
 	}
 
 
@@ -93,26 +174,69 @@ public class Terrain : MonoBehaviour
 		if ( !Directory.Exists( "Chunks" ) ) Directory.CreateDirectory( "Chunks" );
 
 		displayChunkDistance = _displayChunkDistance;
-
-		getChunkAtCoordiate( player.transform.position );
 	}
 
 
 	void Update()
 	{
+		handleInput();
+
+		chunksNeedingBlocks.reprioritise();
+		chunksNeedingMesh.reprioritise();
+		chunksNeedingCollisionMesh.reprioritise();
+
+		runMainThreadTask();
+		runOnePerFrameOnMainThreadTask();
+	}
+
+
+	void handleInput()
+	{
 		if ( Input.GetKeyDown( KeyCode.F1 ) )
 		{
 			displayChunkDistance = Mathf.Max( chunkSize, displayChunkDistance - 8 );
-
 			Debug.Log( "displayChunkDistance: " + displayChunkDistance );
 		}
-
 		if ( Input.GetKeyDown( KeyCode.F2 ) )
 		{
 			displayChunkDistance += 8;
-
 			Debug.Log( "displayChunkDistance: " + displayChunkDistance );
 		}
+	}
+
+
+	void runMainThreadTask()
+	{
+		Action task = null;
+
+		lock ( runOnMainThread )
+		{
+			while ( runOnMainThread.Count > 0 )
+			{
+				task = runOnMainThread[ 0 ];
+				runOnMainThread.RemoveAt( 0 );
+
+				if ( task != null ) task();
+			}
+		}
+	}
+
+
+	void runOnePerFrameOnMainThreadTask()
+	{
+		Action task = null;
+
+		lock ( runOnePerFrameOnMainThread )
+		{
+			if ( runOnePerFrameOnMainThread.Count > 0 )
+			{
+				task = runOnePerFrameOnMainThread[ 0 ];
+				runOnePerFrameOnMainThread.RemoveAt( 0 );
+				if ( task != null ) task();
+			}
+		}
+
+		if ( task != null ) task();
 	}
 
 

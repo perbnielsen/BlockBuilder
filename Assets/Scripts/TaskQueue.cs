@@ -1,7 +1,6 @@
 ﻿using System.Threading;
 using System.Collections.Generic;
 using System;
-using UnityEngine;
 
 
 public class TaskQueue
@@ -13,7 +12,7 @@ public class TaskQueue
 
 	public TaskQueue()
 	{
-		( new Thread( backgroundTask ) ).Start();
+		(new Thread( backgroundTask )).Start();
 	}
 
 

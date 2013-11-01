@@ -10,6 +10,7 @@ public class Player : MonoBehaviour
 	public float gravity = 20f;
 	public float maxSpeed = 20f;
 	public CharacterController characterController;
+	public Chunk chunk;
 
 
 	void Start()
@@ -66,13 +67,15 @@ public class Player : MonoBehaviour
 		velocity = Vector3.ClampMagnitude( velocity, maxSpeed );
 
 		characterController.Move( velocity * Time.deltaTime );
+
+		this.chunk = terrain.getChunkAtCoordiate( transform.position );
 	}
 
 
 	bool playerCollideWithBlockAt( Vector3 blockPosition )
 	{
-		Vector3 distance = transform.parent.position - ( blockPosition + Vector3.one / 2f );
+		Vector3 distance = transform.parent.position - (blockPosition + Vector3.one / 2f);
 
-		return ( Mathf.Abs( distance.x ) < 0.9f && Mathf.Abs( distance.y ) < 1.45f && Mathf.Abs( distance.z ) < 0.9f );
+		return (Mathf.Abs( distance.x ) < 0.9f && Mathf.Abs( distance.y ) < 1.45f && Mathf.Abs( distance.z ) < 0.9f);
 	}
 }

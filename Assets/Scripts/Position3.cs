@@ -4,22 +4,25 @@ using System;
 
 public struct Position3 : IComparable
 {
-	public static Position3 right   { get { return new Position3( 1, 0, 0 ); } }
+	public static Position3 right { get { return new Position3( 1, 0, 0 ); } }
 
 
-	public static Position3 left    { get { return new Position3( -1, 0, 0 ); } }
+	public static Position3 left { get { return new Position3( -1, 0, 0 ); } }
 
 
-	public static Position3 up      { get { return new Position3( 0, 1, 0 ); } }
+	public static Position3 up { get { return new Position3( 0, 1, 0 ); } }
 
 
-	public static Position3 down    { get { return new Position3( 0, -1, 0 ); } }
+	public static Position3 down { get { return new Position3( 0, -1, 0 ); } }
 
 
 	public static Position3 forward { get { return new Position3( 0, 0, 1 ); } }
 
 
-	public static Position3 back    { get { return new Position3( 0, 0, -1 ); } }
+	public static Position3 back { get { return new Position3( 0, 0, -1 ); } }
+
+
+	public static Position3 zero { get { return new Position3( 0, 0, 0 ); } }
 
 
 	public int x, y, z;
@@ -41,7 +44,6 @@ public struct Position3 : IComparable
 
 	public static implicit operator Position3( Vector3 position )
 	{
-//		return new Position3( Mathf.RoundToInt( position.x ), Mathf.RoundToInt( position.y ), Mathf.RoundToInt( position.z ) );
 		return new Position3( Mathf.FloorToInt( position.x ), Mathf.FloorToInt( position.y ), Mathf.FloorToInt( position.z ) );
 	}
 
@@ -78,19 +80,19 @@ public struct Position3 : IComparable
 
 	public static bool operator !=( Position3 a, Position3 b )
 	{
-		return !( a == b );
+		return !(a == b);
 	}
 
 
 	public static bool operator ==( Position3 a, Position3 b )
 	{
-		return ( a.x == b.x && a.y == b.y && a.z == b.z );
+		return (a.x == b.x && a.y == b.y && a.z == b.z);
 	}
 
 
 	public override bool Equals( System.Object obj )
 	{
-		return ( ( obj is Position3 ) && ( this == (Position3)obj ) );
+		return ((obj is Position3) && (this == (Position3)obj));
 	}
 
 
@@ -121,4 +123,10 @@ public struct Position3 : IComparable
 	{
 		return x * 197 + y * 211 + z * 227;
 	}
+
+
+	public int sqrMagnitude { get { return x * x + y * y + z * z; } }
+
+
+	public float magnitude { get { return Mathf.Sqrt( magnitude ); } }
 }
