@@ -13,12 +13,14 @@ public class PrioryTaskQueue< T > where T : IPriorityTask
 {
 	bool running = true;
 	readonly Semaphore tasksCount = new Semaphore( 0, int.MaxValue );
-	readonly List< T > items = new List< T >();
+	readonly List< T > tasks = new List< T >();
 	public Action< T > action;
+	public string name;
 
 
-	public PrioryTaskQueue( Action< T > action, uint threadCount = 1 )
+	public PrioryTaskQueue( string name, Action< T > action, uint threadCount = 1 )
 	{
+		this.name = name;
 		this.action = action;
 
 		while ( threadCount-- > 0 )
@@ -36,9 +38,11 @@ public class PrioryTaskQueue< T > where T : IPriorityTask
 
 	public void reprioritise()
 	{
-		lock ( items )
+		lock ( tasks )
 		{
-			items.Sort( ( a, b ) => b.getPriority().CompareTo( a.getPriority() ) );
+			tasks.Sort( ( a, b ) => b.getPriority().CompareTo( a.getPriority() ) );
+
+//			if ( tasks.Count > 0 ) UnityEngine.Debug.Log( name + " length on frame " + UnityEngine.Time.frameCount + " was " + tasks.Count );
 		}
 	}
 
@@ -47,28 +51,52 @@ public class PrioryTaskQueue< T > where T : IPriorityTask
 	{
 		T item;
 
+		uint i = 0;
+
 		while ( running )
 		{
+//			UnityEngine.Debug.Log( name + ": Waiting..." + i );
 			tasksCount.WaitOne();
 
-			lock ( items )
+			lock ( tasks )
 			{
-				item = items[ 0 ];
-				items.RemoveAt( 0 );
+				item = tasks[ 0 ];
+				tasks.RemoveAt( 0 );
 			}
-
+//			UnityEngine.Debug.Log( name + ": Running..." + i + " " + (item as Chunk).position );
 			action( item );
+			++i;
 		}
 	}
 
 
-	public void enqueueTask( T task )
+	public void enqueueTask( T newTask )
 	{
-		lock ( items )
+		lock ( tasks )
 		{
-			items.Add( task );
+			tasks.Add( newTask );
 		}
 
 		tasksCount.Release();
+	}
+
+
+	public void enqueueTasks( List< T > newTasks )
+	{
+		lock ( tasks )
+		{
+			tasks.AddRange( newTasks );
+		}
+
+		tasksCount.Release( newTasks.Count );
+	}
+
+
+	public void dequeueTask( T task )
+	{
+		lock ( tasks )
+		{
+			while ( tasks.Remove( task ) ) tasksCount.WaitOne();
+		}
 	}
 }

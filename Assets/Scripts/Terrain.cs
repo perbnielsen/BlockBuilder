@@ -5,40 +5,25 @@ using System;
 
 
 /*
- * 
 spawned()
-
 	updateBlocks()
-
 	if ( should be visible ) spawn all neighbours
 
-
-
 neighbourBlocksHaveChanged()
-	
 	if ( all neighbours exist and should be visible ) generate visual mesh
 
-
-
 playerMoved()
-
 	regenerate visual mesh 
 
-
-
 updateBlocks()
-
 	generateBlocks
-
 	generate collision mesh
-
 	send all existing neighbours neighbourBlocksHaveChanged
-	
 */
 public class Terrain : MonoBehaviour
 {
-	public readonly List< Action > runOnePerFrameOnMainThread = new List< Action >();
 	public readonly List< Action > runOnMainThread = new List< Action >();
+	public readonly List< Action > runOnePerFrameOnMainThread = new List< Action >();
 	//
 	public bool isQuitting;
 	public Player player;
@@ -56,15 +41,12 @@ public class Terrain : MonoBehaviour
 	//
 	readonly Dictionary< Position3, Chunk > chunks = new Dictionary< Position3, Chunk >();
 	//
-	readonly PrioryTaskQueue<Chunk> chunksNeedingBlocks = new PrioryTaskQueue< Chunk >( chunk =>
-	{
-		chunk.populateBlocks();
-
-		chunk.terrain.runOnMainThread.Add( chunk.generateNeighbours );
-	}, 1 );
+	public readonly List< Chunk > activeChunks = new List< Chunk >();
+	public readonly List< Chunk > inactiveChunks = new List< Chunk >();
 	//
-	//
-	public readonly PrioryTaskQueue<Chunk> chunksNeedingMesh = new PrioryTaskQueue< Chunk >( chunk => chunk.buildMesh(), 1 );
+	public readonly PrioryTaskQueue<Chunk> chunksNeedingBlocks = new PrioryTaskQueue< Chunk >( "blocks", chunk => chunk.populateBlocks(), 1 );
+	public readonly PrioryTaskQueue<Chunk> chunksNeedingMesh = new PrioryTaskQueue< Chunk >( "mesh", chunk => chunk.buildMesh(), 1 );
+	public readonly PrioryTaskQueue<Chunk> chunksNeedingCollisionMesh = new PrioryTaskQueue< Chunk >( "collision mesh", chunk => chunk.buildCollisionMesh(), 1 );
 	//
 	//
 	public float displayChunkDistance {
@@ -73,8 +55,8 @@ public class Terrain : MonoBehaviour
 		{
 			_displayChunkDistance = value;
 			_displayChunkDistanceSqr = displayChunkDistance * displayChunkDistance;
-			_disableChunkDistanceSqr = (displayChunkDistance + chunkSize * 0) * (displayChunkDistance + chunkSize * 0);
-			_destroyChunkDistanceSqr = (displayChunkDistance + chunkSize * 1) * (displayChunkDistance + chunkSize * 1);
+			_disableChunkDistanceSqr = (displayChunkDistance + chunkSize * 1) * (displayChunkDistance + chunkSize * 1);
+			_destroyChunkDistanceSqr = (displayChunkDistance + chunkSize * 2) * (displayChunkDistance + chunkSize * 2);
 		}
 	}
 
@@ -118,12 +100,15 @@ public class Terrain : MonoBehaviour
 	}
 
 
-	public Chunk getChunk( Position3 position )
+	public Chunk getChunk( Position3 position, bool createIfNonexistent = true )
 	{
-		// Note: Returns the chunk at position (in chunks). If the chunk does not exist it will be created first
+		// Note: Returns the chunk at position (in chunks). If the chunk does not exist,
+		// and createIfNonexistent is true, it will be created and returned.
 		if ( !chunks.ContainsKey( position ) )
 		{
-			return createChunk( position );
+			if ( createIfNonexistent ) return createChunk( position );
+
+			return null;
 		}
 
 		return chunks[ position ];
@@ -152,9 +137,13 @@ public class Terrain : MonoBehaviour
 
 		chunksNeedingBlocks.reprioritise();
 		chunksNeedingMesh.reprioritise();
+		chunksNeedingCollisionMesh.reprioritise();
 
 		runMainThreadTask();
 		runOnePerFrameOnMainThreadTask();
+
+		activeChunks.RemoveAll( chunk => !chunk.checkIfStillActive() );
+		inactiveChunks.RemoveAll( chunk => !chunk.checkIfStillInactive() );
 	}
 
 
@@ -165,6 +154,7 @@ public class Terrain : MonoBehaviour
 			displayChunkDistance = Mathf.Max( chunkSize, displayChunkDistance - 8 );
 			Debug.Log( "displayChunkDistance: " + displayChunkDistance );
 		}
+		
 		if ( Input.GetKeyDown( KeyCode.F2 ) )
 		{
 			displayChunkDistance += 8;
@@ -213,5 +203,9 @@ public class Terrain : MonoBehaviour
 		isQuitting = true;
 		chunkTasks.stop();
 		fileTasks.stop();
+
+		chunksNeedingBlocks.stop();
+		chunksNeedingMesh.stop();
+		chunksNeedingCollisionMesh.stop();
 	}
 }

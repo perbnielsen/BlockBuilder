@@ -117,7 +117,7 @@ MonoBehaviour:
   seed: 0
   chunkSize: 32
   chunkPrefab: {fileID: 11400000, guid: 593ee089cdb3540b1a217913c94ad1f1, type: 2}
-  _displayChunkDistance: 256
+  _displayChunkDistance: 128
 --- !u!1 &354730893
 GameObject:
   m_ObjectHideFlags: 0
@@ -404,6 +404,10 @@ Prefab:
       propertyPath: m_Shadows.m_Type
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 100000, guid: dc90eef381da74bb19299e4f4832c7d9, type: 2}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: dc90eef381da74bb19299e4f4832c7d9, type: 2}
   m_RootGameObject: {fileID: 1321172615}
@@ -440,7 +444,7 @@ Light:
   m_SpotAngle: 30
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 1
+    m_Type: 0
     m_Resolution: 3
     m_Strength: 1
     m_Bias: .0500000007
@@ -486,7 +490,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1321172616
 Transform:
   m_ObjectHideFlags: 0

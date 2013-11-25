@@ -1,4 +1,6 @@
 ﻿using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
 
 
 public class Player : MonoBehaviour
@@ -18,6 +20,8 @@ public class Player : MonoBehaviour
 	{
 		Screen.lockCursor = !Application.isEditor;
 		Screen.showCursor = false;
+
+		chunk = terrain.getChunkAtCoordiate( transform.position );
 	}
 
 
@@ -33,9 +37,9 @@ public class Player : MonoBehaviour
 
 				if ( !playerCollideWithBlockAt( blockPositionAdd ) )
 				{
-					Chunk chunk = terrain.getChunkAtCoordiate( blockPositionAdd );
+					Chunk chunkToCreate = terrain.getChunkAtCoordiate( blockPositionAdd );
 
-					chunk.setBlock( blockPositionAdd - chunk.position * terrain.chunkSize, Block.Type.rock );
+					chunkToCreate.setBlock( blockPositionAdd - chunkToCreate.position * terrain.chunkSize, Block.Type.rock );
 				}
 			}
 		}
@@ -48,9 +52,9 @@ public class Player : MonoBehaviour
 			{
 				Position3 blockPositionDel = hit.point - hit.normal / 2f;
 
-				Chunk chunk = terrain.getChunkAtCoordiate( blockPositionDel );
+				Chunk chunkToDelete = terrain.getChunkAtCoordiate( blockPositionDel );
 
-				chunk.setBlock( blockPositionDel - chunk.position * terrain.chunkSize, Block.Type.none );
+				chunkToDelete.setBlock( blockPositionDel - chunkToDelete.position * terrain.chunkSize, Block.Type.none );
 			}
 		}
 
@@ -80,9 +84,44 @@ public class Player : MonoBehaviour
 
 		velocity = Vector3.ClampMagnitude( velocity, maxSpeed );
 
-		characterController.Move( velocity * Time.deltaTime );
+		if ( chunk.hasCollisionMesh ) characterController.Move( velocity * Time.deltaTime );
 
-		this.chunk = terrain.getChunkAtCoordiate( transform.position );
+		updateChunkMeshes();
+	}
+
+
+	void updateChunkMeshes()
+	{
+		var oldChunk = chunk;
+
+		chunk = terrain.getChunkAtCoordiate( transform.position );
+
+		if ( chunk.position != oldChunk.position )
+		{
+			if ( chunk.position.x != oldChunk.position.x )
+			{
+				Debug.Log( "New x position" );
+				terrain.chunksNeedingMesh.enqueueTasks( oldChunk.getAllNeighboursInYZPlane() );
+				terrain.chunksNeedingMesh.enqueueTasks( chunk.getAllNeighboursInYZPlane() );
+			}
+
+			if ( chunk.position.y != oldChunk.position.y )
+			{
+				Debug.Log( "New y position" );
+				terrain.chunksNeedingMesh.enqueueTasks( oldChunk.getAllNeighboursInXZPlane() );
+				terrain.chunksNeedingMesh.enqueueTasks( chunk.getAllNeighboursInXZPlane() );
+			}
+
+			if ( chunk.position.z != oldChunk.position.z )
+			{
+				Debug.Log( "New z position" );
+				terrain.chunksNeedingMesh.enqueueTasks( oldChunk.getAllNeighboursInXYPlane() );
+				terrain.chunksNeedingMesh.enqueueTasks( chunk.getAllNeighboursInXYPlane() );
+			}
+
+			terrain.chunksNeedingMesh.enqueueTask( oldChunk );
+			terrain.chunksNeedingMesh.enqueueTask( chunk );
+		}
 	}
 
 
