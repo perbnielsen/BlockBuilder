@@ -61,7 +61,13 @@ public class PrioryTaskQueue< T > where T : IPriorityTask
 				tasks.RemoveAt( 0 );
 			}
 
-			if ( item != null ) action( item );
+			try
+			{
+				if ( item != null ) action( item );
+			}
+			catch
+			{
+			}
 			
 			++i;
 		}
