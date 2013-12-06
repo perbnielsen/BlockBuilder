@@ -1,6 +1,4 @@
 ﻿using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
 
 
 public class Player : MonoBehaviour
@@ -100,21 +98,21 @@ public class Player : MonoBehaviour
 		{
 			if ( chunk.position.x != oldChunk.position.x )
 			{
-				Debug.Log( "New x position" );
+//				Debug.Log( "New x position" );
 				terrain.chunksNeedingMesh.enqueueTasks( oldChunk.getAllNeighboursInYZPlane() );
 				terrain.chunksNeedingMesh.enqueueTasks( chunk.getAllNeighboursInYZPlane() );
 			}
 
 			if ( chunk.position.y != oldChunk.position.y )
 			{
-				Debug.Log( "New y position" );
+//				Debug.Log( "New y position" );
 				terrain.chunksNeedingMesh.enqueueTasks( oldChunk.getAllNeighboursInXZPlane() );
 				terrain.chunksNeedingMesh.enqueueTasks( chunk.getAllNeighboursInXZPlane() );
 			}
 
 			if ( chunk.position.z != oldChunk.position.z )
 			{
-				Debug.Log( "New z position" );
+//				Debug.Log( "New z position" );
 				terrain.chunksNeedingMesh.enqueueTasks( oldChunk.getAllNeighboursInXYPlane() );
 				terrain.chunksNeedingMesh.enqueueTasks( chunk.getAllNeighboursInXYPlane() );
 			}

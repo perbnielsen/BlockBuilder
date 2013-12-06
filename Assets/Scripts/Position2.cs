@@ -3,10 +3,17 @@ using UnityEngine;
 
 public struct Position2
 {
-	public static Position2 right   { get { return new Position2( 1, 0 ); } }
-	public static Position2 left    { get { return new Position2( -1, 0 ); } }
-	public static Position2 up      { get { return new Position2( 0, 1 ); } } 
-	public static Position2 down    { get { return new Position2( 0, -1 ); } }
+	public static Position2 right { get { return new Position2( 1, 0 ); } }
+
+
+	public static Position2 left { get { return new Position2( -1, 0 ); } }
+
+
+	public static Position2 up { get { return new Position2( 0, 1 ); } }
+
+
+	public static Position2 down { get { return new Position2( 0, -1 ); } }
+
 
 	public int x, y;
 

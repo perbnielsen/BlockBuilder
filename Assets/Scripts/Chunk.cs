@@ -18,12 +18,72 @@ public class Chunk : MonoBehaviour, IPriorityTask
 	//
 	byte[] blocks;
 	//
-	Chunk neighbourRight;
-	Chunk neighbourLeft;
-	Chunk neighbourUp;
-	Chunk neighbourDown;
-	Chunk neighbourForward;
-	Chunk neighbourBack;
+	Chunk _neighbourRight;
+	Chunk _neighbourLeft;
+	Chunk _neighbourUp;
+	Chunk _neighbourDown;
+	Chunk _neighbourForward;
+	Chunk _neighbourBack;
+
+
+	Chunk neighbourRight {
+		get { return _neighbourRight; }
+		set
+		{
+			_neighbourRight = value;
+			updateHasAllNeighbours();
+		}
+	}
+
+
+	Chunk neighbourLeft {
+		get { return _neighbourLeft; }
+		set
+		{
+			_neighbourLeft = value;
+			updateHasAllNeighbours();
+		}
+	}
+
+
+	Chunk neighbourUp {
+		get { return _neighbourUp; }
+		set
+		{
+			_neighbourUp = value;
+			updateHasAllNeighbours();
+		}
+	}
+
+
+	Chunk neighbourDown {
+		get { return _neighbourDown; }
+		set
+		{
+			_neighbourDown = value;
+			updateHasAllNeighbours();
+		}
+	}
+
+
+	Chunk neighbourForward {
+		get { return _neighbourForward; }
+		set
+		{
+			_neighbourForward = value;
+			updateHasAllNeighbours();
+		}
+	}
+
+
+	Chunk neighbourBack {
+		get { return _neighbourBack; }
+		set
+		{
+			_neighbourBack = value;
+			updateHasAllNeighbours();
+		}
+	}
 
 
 	[Flags]
@@ -49,12 +109,19 @@ public class Chunk : MonoBehaviour, IPriorityTask
 	}
 
 
-	bool hasAllNeighbours { get { return neighbourRight != null
+	bool hasAllNeighbours;
+
+
+	void updateHasAllNeighbours()
+	{
+		hasAllNeighbours = 
+			(neighbourRight != null
 		&& neighbourLeft != null
 		&& neighbourUp != null
 		&& neighbourDown != null
 		&& neighbourForward != null
-		&& neighbourBack != null; } }
+		&& neighbourBack != null);
+	}
 
 
 	public bool hasBlocks { get { return (state & State.HasBlocks) == State.HasBlocks; } }
@@ -146,6 +213,10 @@ public class Chunk : MonoBehaviour, IPriorityTask
 
 	public Block.Type getBlock( int x, int y, int z )
 	{
+		buildMeshState = 11;
+
+		if ( !hasAllNeighbours ) return Block.Type.none;
+		
 		if ( x < 0 ) return neighbourLeft.getBlock( x + size, y, z );
 		if ( x >= size ) return neighbourRight.getBlock( x - size, y, z );
 
@@ -154,6 +225,9 @@ public class Chunk : MonoBehaviour, IPriorityTask
 
 		if ( z < 0 ) return neighbourBack.getBlock( x, y, z + size );
 		if ( z >= size ) return neighbourForward.getBlock( x, y, z - size );
+
+
+		buildMeshState = 12;
 
 		if ( blocks == null ) return Block.Type.none;
 
@@ -300,6 +374,10 @@ public class Chunk : MonoBehaviour, IPriorityTask
 				meshCollider.enabled = false;
 			} );
 
+			terrain.chunksNeedingBlocks.dequeueTask( this );
+			terrain.chunksNeedingCollisionMesh.dequeueTask( this );
+			terrain.chunksNeedingMesh.dequeueTask( this );
+
 			terrain.inactiveChunks.Add( this );
 
 			return false;
@@ -338,6 +416,8 @@ public class Chunk : MonoBehaviour, IPriorityTask
 //		destroyCollisionMesh();
 		state |= State.HasCollisionMesh;
 
+		if ( meshCollider == null ) return;
+		
 		meshCollider.enabled = false;
 
 		if ( triangles.Length == 0 ) return;
@@ -367,10 +447,10 @@ public class Chunk : MonoBehaviour, IPriorityTask
 
 		if ( neighbourRight != null ) neighbourRight.neighbourLeft = null;
 		if ( neighbourLeft != null ) neighbourLeft.neighbourRight = null;
-		if ( neighbourUp != null ) neighbourUp.neighbourDown = null;
-		if ( neighbourDown != null ) neighbourDown.neighbourUp = null;
-		if ( neighbourForward != null ) neighbourForward.neighbourBack = null;
-		if ( neighbourBack != null ) neighbourBack.neighbourForward = null;
+		if ( neighbourUp != null ) neighbourUp.neighbourDown = null; 
+		if ( neighbourDown != null ) neighbourDown.neighbourUp = null; 
+		if ( neighbourForward != null ) neighbourForward.neighbourBack = null; 
+		if ( neighbourBack != null ) neighbourBack.neighbourForward = null; 
 
 		if ( !terrain.isQuitting )
 		{
@@ -466,22 +546,42 @@ public class Chunk : MonoBehaviour, IPriorityTask
 	}
 
 
+	public static int buildMeshState = 0;
+
+
+	[ContextMenu( "Print buildMeshState" )]
+	void printBuildMeshState()
+	{
+		Debug.Log( buildMeshState );
+	}
+
+
 	[ContextMenu( "Build mesh" )]
 	public void buildMesh()
 	{
+		buildMeshState = 1;
 		List<Vector3> vertices = new List<Vector3>();
 		List<int> triangles = new List<int>();
 		List<Vector2> uvs = new List<Vector2>();
 
+		buildMeshState = 2;
+
 		var positionRelativeToPlayer = terrain.player.chunk.position - position;
+		buildMeshState = 3;
 		generateMesh( positionRelativeToPlayer, ref vertices, ref triangles, ref uvs );
+
+		buildMeshState = 4;
 
 		var vertexArray = vertices.ToArray();
 		var triangleArray = triangles.ToArray();
 		var uvArray = uvs.ToArray();
 
+		buildMeshState = 5;
+
 //		if ( triangles.Count > 0 ) 
 		terrain.runOnMainThread.Add( () => setMesh( vertexArray, triangleArray, uvArray ) );
+
+		buildMeshState = 6;
 	}
 
 

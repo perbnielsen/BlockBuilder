@@ -41,8 +41,6 @@ public class PrioryTaskQueue< T > where T : IPriorityTask
 		lock ( tasks )
 		{
 			tasks.Sort( ( a, b ) => b.getPriority().CompareTo( a.getPriority() ) );
-
-//			if ( tasks.Count > 0 ) UnityEngine.Debug.Log( name + " length on frame " + UnityEngine.Time.frameCount + " was " + tasks.Count );
 		}
 	}
 
@@ -55,7 +53,6 @@ public class PrioryTaskQueue< T > where T : IPriorityTask
 
 		while ( running )
 		{
-//			UnityEngine.Debug.Log( name + ": Waiting..." + i );
 			tasksCount.WaitOne();
 
 			lock ( tasks )
@@ -63,8 +60,9 @@ public class PrioryTaskQueue< T > where T : IPriorityTask
 				item = tasks[ 0 ];
 				tasks.RemoveAt( 0 );
 			}
-//			UnityEngine.Debug.Log( name + ": Running..." + i + " " + (item as Chunk).position );
-			action( item );
+
+			if ( item != null ) action( item );
+			
 			++i;
 		}
 	}
@@ -74,10 +72,12 @@ public class PrioryTaskQueue< T > where T : IPriorityTask
 	{
 		lock ( tasks )
 		{
-			tasks.Add( newTask );
+			if ( tasks.Find( element => element.Equals( newTask ) ) == null )
+			{
+				tasks.Add( newTask );
+				tasksCount.Release();
+			}
 		}
-
-		tasksCount.Release();
 	}
 
 
@@ -99,4 +99,7 @@ public class PrioryTaskQueue< T > where T : IPriorityTask
 			while ( tasks.Remove( task ) ) tasksCount.WaitOne();
 		}
 	}
+
+
+	public int Count { get { return tasks.Count; } }
 }

@@ -131,19 +131,34 @@ public class Terrain : MonoBehaviour
 	}
 
 
+	[ContextMenu( "Print queue sizes" )]
+	void printQueueSizes()
+	{
+		Debug.Log( "chunksNeedingBlocks: " + chunksNeedingBlocks.Count );
+		Debug.Log( "chunksNeedingMesh: " + chunksNeedingMesh.Count );
+		Debug.Log( "chunksNeedingCollisionMesh: " + chunksNeedingCollisionMesh.Count );
+	}
+
+
 	void Update()
 	{
 		handleInput();
 
+		Profiler.BeginSample( "1" );
 		chunksNeedingBlocks.reprioritise();
 		chunksNeedingMesh.reprioritise();
 		chunksNeedingCollisionMesh.reprioritise();
+		Profiler.EndSample();
 
+		Profiler.BeginSample( "2" );
 		runMainThreadTask();
 		runOnePerFrameOnMainThreadTask();
+		Profiler.EndSample();
 
+		Profiler.BeginSample( "3" );
 		activeChunks.RemoveAll( chunk => !chunk.checkIfStillActive() );
 		inactiveChunks.RemoveAll( chunk => !chunk.checkIfStillInactive() );
+		Profiler.EndSample();
 	}
 
 
@@ -175,7 +190,6 @@ public class Terrain : MonoBehaviour
 				runOnMainThread.RemoveAt( 0 );
 
 				if ( task != null ) task();
-				else Debug.Log( "null on task list???" );
 			}
 		}
 	}
