@@ -24,6 +24,12 @@ public class Chunk : MonoBehaviour, IPriorityTask
 	Chunk _neighbourDown;
 	Chunk _neighbourForward;
 	Chunk _neighbourBack;
+	bool hasNeighbourRight;
+	bool hasNeighbourLeft;
+	bool hasNeighbourUp;
+	bool hasNeighbourDown;
+	bool hasNeighbourForward;
+	bool hasNeighbourBack;
 
 
 	Chunk neighbourRight {
@@ -31,7 +37,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		set
 		{
 			_neighbourRight = value;
-			updateHasAllNeighbours();
+			hasNeighbourRight = (value != null);
 		}
 	}
 
@@ -41,7 +47,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		set
 		{
 			_neighbourLeft = value;
-			updateHasAllNeighbours();
+			hasNeighbourLeft = (value != null);
 		}
 	}
 
@@ -51,7 +57,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		set
 		{
 			_neighbourUp = value;
-			updateHasAllNeighbours();
+			hasNeighbourUp = (value != null);
 		}
 	}
 
@@ -61,7 +67,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		set
 		{
 			_neighbourDown = value;
-			updateHasAllNeighbours();
+			hasNeighbourDown = (value != null);
 		}
 	}
 
@@ -71,7 +77,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		set
 		{
 			_neighbourForward = value;
-			updateHasAllNeighbours();
+			hasNeighbourForward = (value != null);
 		}
 	}
 
@@ -81,7 +87,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		set
 		{
 			_neighbourBack = value;
-			updateHasAllNeighbours();
+			hasNeighbourBack = (value != null);
 		}
 	}
 
@@ -109,19 +115,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
 	}
 
 
-	bool hasAllNeighbours;
-
-
-	void updateHasAllNeighbours()
-	{
-		hasAllNeighbours = 
-			(neighbourRight != null
-		&& neighbourLeft != null
-		&& neighbourUp != null
-		&& neighbourDown != null
-		&& neighbourForward != null
-		&& neighbourBack != null);
-	}
+	bool hasAllNeighbours { get { return (hasNeighbourRight && hasNeighbourLeft	&& hasNeighbourUp && hasNeighbourDown && hasNeighbourForward && hasNeighbourBack); } }
 
 
 	public bool hasBlocks { get { return (state & State.HasBlocks) == State.HasBlocks; } }
@@ -215,17 +209,14 @@ public class Chunk : MonoBehaviour, IPriorityTask
 	{
 		buildMeshState = 11;
 
-		if ( !hasAllNeighbours ) return Block.Type.none;
-		
-		if ( x < 0 ) return neighbourLeft.getBlock( x + size, y, z );
-		if ( x >= size ) return neighbourRight.getBlock( x - size, y, z );
+		if ( x < 0 ) return hasNeighbourLeft ? neighbourLeft.getBlock( x + size, y, z ) : Block.Type.none;
+		if ( x >= size ) return hasNeighbourRight ? neighbourRight.getBlock( x - size, y, z ) : Block.Type.none;
 
-		if ( y < 0 ) return neighbourDown.getBlock( x, y + size, z );
-		if ( y >= size ) return neighbourUp.getBlock( x, y - size, z );
+		if ( y < 0 ) return hasNeighbourDown ? neighbourDown.getBlock( x, y + size, z ) : Block.Type.none;
+		if ( y >= size ) return hasNeighbourUp ? neighbourUp.getBlock( x, y - size, z ) : Block.Type.none;
 
-		if ( z < 0 ) return neighbourBack.getBlock( x, y, z + size );
-		if ( z >= size ) return neighbourForward.getBlock( x, y, z - size );
-
+		if ( z < 0 ) return hasNeighbourBack ? neighbourBack.getBlock( x, y, z + size ) : Block.Type.none;
+		if ( z >= size ) return hasNeighbourForward ? neighbourForward.getBlock( x, y, z - size ) : Block.Type.none;
 
 		buildMeshState = 12;
 
@@ -246,13 +237,13 @@ public class Chunk : MonoBehaviour, IPriorityTask
 		terrain.chunksNeedingCollisionMesh.enqueueTask( this );
 
 		// Update any neighbour chunk that might be affected
-		if ( blockPosition.x == 0 && neighbourLeft != null ) neighbourLeft.neighbourBlocksHaveChanged();
-		if ( blockPosition.y == 0 && neighbourDown != null ) neighbourDown.neighbourBlocksHaveChanged();
-		if ( blockPosition.z == 0 && neighbourBack != null ) neighbourBack.neighbourBlocksHaveChanged();
+		if ( blockPosition.x == 0 && hasNeighbourLeft ) neighbourLeft.neighbourBlocksHaveChanged();
+		if ( blockPosition.y == 0 && hasNeighbourDown ) neighbourDown.neighbourBlocksHaveChanged();
+		if ( blockPosition.z == 0 && hasNeighbourBack ) neighbourBack.neighbourBlocksHaveChanged();
 
-		if ( blockPosition.x == size - 1 && neighbourRight != null ) neighbourRight.neighbourBlocksHaveChanged();
-		if ( blockPosition.y == size - 1 && neighbourUp != null ) neighbourUp.neighbourBlocksHaveChanged();
-		if ( blockPosition.z == size - 1 && neighbourForward != null ) neighbourForward.neighbourBlocksHaveChanged();
+		if ( blockPosition.x == size - 1 && hasNeighbourRight ) neighbourRight.neighbourBlocksHaveChanged();
+		if ( blockPosition.y == size - 1 && hasNeighbourUp ) neighbourUp.neighbourBlocksHaveChanged();
+		if ( blockPosition.z == size - 1 && hasNeighbourForward ) neighbourForward.neighbourBlocksHaveChanged();
 
 		saveChunkToDisk();
 	}
@@ -492,8 +483,6 @@ public class Chunk : MonoBehaviour, IPriorityTask
 
 	public void informNeighboursOfBlockGeneration()
 	{
-//		Debug.Log( "Generating neighbours for " + position );
-
 		if ( neighbourRight = terrain.getChunk( position + Position3.right, createIfNonexistent: false ) )
 		{
 			neighbourRight.neighbourLeft = this;
