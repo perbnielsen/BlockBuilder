@@ -207,8 +207,6 @@ public class Chunk : MonoBehaviour, IPriorityTask
 
 	public Block.Type getBlock( int x, int y, int z )
 	{
-		buildMeshState = 11;
-
 		if ( x < 0 ) return hasNeighbourLeft ? neighbourLeft.getBlock( x + size, y, z ) : Block.Type.none;
 		if ( x >= size ) return hasNeighbourRight ? neighbourRight.getBlock( x - size, y, z ) : Block.Type.none;
 
@@ -217,8 +215,6 @@ public class Chunk : MonoBehaviour, IPriorityTask
 
 		if ( z < 0 ) return hasNeighbourBack ? neighbourBack.getBlock( x, y, z + size ) : Block.Type.none;
 		if ( z >= size ) return hasNeighbourForward ? neighbourForward.getBlock( x, y, z - size ) : Block.Type.none;
-
-		buildMeshState = 12;
 
 		if ( blocks == null ) return Block.Type.none;
 
@@ -535,42 +531,22 @@ public class Chunk : MonoBehaviour, IPriorityTask
 	}
 
 
-	public static int buildMeshState = 0;
-
-
-	[ContextMenu( "Print buildMeshState" )]
-	void printBuildMeshState()
-	{
-		Debug.Log( buildMeshState );
-	}
-
-
 	[ContextMenu( "Build mesh" )]
 	public void buildMesh()
 	{
-		buildMeshState = 1;
 		List<Vector3> vertices = new List<Vector3>();
 		List<int> triangles = new List<int>();
 		List<Vector2> uvs = new List<Vector2>();
 
-		buildMeshState = 2;
-
 		var positionRelativeToPlayer = terrain.player.chunk.position - position;
-		buildMeshState = 3;
 		generateMesh( positionRelativeToPlayer, ref vertices, ref triangles, ref uvs );
-
-		buildMeshState = 4;
 
 		var vertexArray = vertices.ToArray();
 		var triangleArray = triangles.ToArray();
 		var uvArray = uvs.ToArray();
 
-		buildMeshState = 5;
-
 //		if ( triangles.Count > 0 ) 
 		terrain.runOnMainThread.Add( () => setMesh( vertexArray, triangleArray, uvArray ) );
-
-		buildMeshState = 6;
 	}
 
 

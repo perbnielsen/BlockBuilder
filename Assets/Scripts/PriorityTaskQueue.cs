@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Collections.Generic;
+using UnityEngine;
 
 
 public interface IPriorityTask
@@ -65,8 +66,9 @@ public class PrioryTaskQueue< T > where T : IPriorityTask
 			{
 				if ( item != null ) action( item );
 			}
-			catch
+			catch ( Exception e )
 			{
+				Debug.Log( name + " caught an exception: " + e.Message );
 			}
 			
 			++i;
@@ -91,10 +93,20 @@ public class PrioryTaskQueue< T > where T : IPriorityTask
 	{
 		lock ( tasks )
 		{
-			tasks.AddRange( newTasks );
+			while ( newTasks.Count > 0 )
+			{
+				if ( tasks.Find( element => element.Equals( newTasks[ 0 ] ) ) == null )
+				{
+					tasks.Add( newTasks[ 0 ] );
+					tasksCount.Release();
+				}
+
+				newTasks.RemoveAt( 0 );
+			}
+//			tasks.AddRange( newTasks );
 		}
 
-		tasksCount.Release( newTasks.Count );
+//		tasksCount.Release( newTasks.Count );
 	}
 
 
