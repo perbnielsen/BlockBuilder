@@ -12,14 +12,14 @@ public class Player : MonoBehaviour
     public Chunk chunk;
     public Light torch;
 
-    void Start()
+    private void Start()
     {
         Screen.lockCursor = !Application.isEditor;
         Cursor.visible = false;
         chunk = terrain.getChunkAtCoordiate(transform.position);
     }
 
-    void Update()
+    private void Update()
     {
         if (Input.GetMouseButtonDown(0)) // Left mouse button
         {
@@ -46,10 +46,12 @@ public class Player : MonoBehaviour
                 chunkToDelete.setBlock(blockPositionDel - chunkToDelete.position * terrain.chunkSize, Block.Type.none);
             }
         }
+
         if (Input.GetKeyDown(KeyCode.T))
         {
             torch.enabled = !torch.enabled;
         }
+
         if (Input.GetKeyDown(KeyCode.E))
         {
             Transform newTorch = Instantiate(torch.transform) as Transform;
@@ -57,6 +59,7 @@ public class Player : MonoBehaviour
             newTorch.position = torch.transform.position;
             newTorch.parent = transform.parent.parent;
         }
+
         Vector3 velocity = characterController.velocity;
         velocity.x = velocity.z = 0f;
         velocity += Input.GetAxis("Horizontal") * transform.parent.right * speed;
@@ -68,7 +71,7 @@ public class Player : MonoBehaviour
         updateChunkMeshes();
     }
 
-    void updateChunkMeshes()
+    private void updateChunkMeshes()
     {
         var oldChunk = chunk;
         chunk = terrain.getChunkAtCoordiate(transform.position);
@@ -97,7 +100,7 @@ public class Player : MonoBehaviour
         }
     }
 
-    bool playerCollideWithBlockAt(Vector3 blockPosition)
+    private bool playerCollideWithBlockAt(Vector3 blockPosition)
     {
         Vector3 distance = transform.parent.position - (blockPosition + Vector3.one / 2f);
         return (Mathf.Abs(distance.x) < 0.9f && Mathf.Abs(distance.y) < 1.45f && Mathf.Abs(distance.z) < 0.9f);

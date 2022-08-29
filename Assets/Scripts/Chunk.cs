@@ -15,22 +15,22 @@ public class Chunk : MonoBehaviour, IPriorityTask
     public MeshFilter meshFilter;
     public MeshCollider meshCollider;
 
-    byte[] blocks;
+    private byte[] blocks;
 
-    Chunk _neighbourRight;
-    Chunk _neighbourLeft;
-    Chunk _neighbourUp;
-    Chunk _neighbourDown;
-    Chunk _neighbourForward;
-    Chunk _neighbourBack;
-    bool hasNeighbourRight;
-    bool hasNeighbourLeft;
-    bool hasNeighbourUp;
-    bool hasNeighbourDown;
-    bool hasNeighbourForward;
-    bool hasNeighbourBack;
+    private Chunk _neighbourRight;
+    private Chunk _neighbourLeft;
+    private Chunk _neighbourUp;
+    private Chunk _neighbourDown;
+    private Chunk _neighbourForward;
+    private Chunk _neighbourBack;
+    private bool hasNeighbourRight;
+    private bool hasNeighbourLeft;
+    private bool hasNeighbourUp;
+    private bool hasNeighbourDown;
+    private bool hasNeighbourForward;
+    private bool hasNeighbourBack;
 
-    Chunk neighbourRight
+    private Chunk neighbourRight
     {
         get { return _neighbourRight; }
         set
@@ -40,7 +40,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
         }
     }
 
-    Chunk neighbourLeft
+    private Chunk neighbourLeft
     {
         get { return _neighbourLeft; }
         set
@@ -50,7 +50,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
         }
     }
 
-    Chunk neighbourUp
+    private Chunk neighbourUp
     {
         get { return _neighbourUp; }
         set
@@ -60,7 +60,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
         }
     }
 
-    Chunk neighbourDown
+    private Chunk neighbourDown
     {
         get { return _neighbourDown; }
         set
@@ -70,7 +70,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
         }
     }
 
-    Chunk neighbourForward
+    private Chunk neighbourForward
     {
         get { return _neighbourForward; }
         set
@@ -80,7 +80,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
         }
     }
 
-    Chunk neighbourBack
+    private Chunk neighbourBack
     {
         get { return _neighbourBack; }
         set
@@ -91,7 +91,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
     }
 
     [Flags]
-    enum State : byte
+    private enum State : byte
     {
         Initialised = 0x0,
         HasBlocks = 0x1,
@@ -101,7 +101,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
         IsActive = 0x10
     }
 
-    State state;
+    private State state;
 
     public float getPriority()
     {
@@ -110,7 +110,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
         return (Vector3.Dot(fromPlayerToChunk.normalized, terrain.player.transform.forward.normalized) + 1.25f) / fromPlayerToChunk.sqrMagnitude;
     }
 
-    bool hasAllNeighbours { get { return (hasNeighbourRight && hasNeighbourLeft && hasNeighbourUp && hasNeighbourDown && hasNeighbourForward && hasNeighbourBack); } }
+    private bool hasAllNeighbours { get { return (hasNeighbourRight && hasNeighbourLeft && hasNeighbourUp && hasNeighbourDown && hasNeighbourForward && hasNeighbourBack); } }
 
     public bool hasBlocks { get { return (state & State.HasBlocks) == State.HasBlocks; } }
     public bool hasMesh { get { return (state & State.HasMesh) == State.HasMesh; } }
@@ -118,7 +118,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
     public bool isActive { get { return (state & State.IsActive) == State.IsActive; } }
 
     [ContextMenu("Show state")]
-    void showState()
+    private void showState()
     {
         Debug.Log(state);
     }
@@ -126,12 +126,12 @@ public class Chunk : MonoBehaviour, IPriorityTask
     #region Serialization
 
     [ContextMenu("Save to disk")]
-    void saveChunkToDisk()
+    private void saveChunkToDisk()
     {
         terrain.fileTasks.enqueueTask(saveChunkToDiskTask);
     }
 
-    void saveChunkToDiskTask()
+    private void saveChunkToDiskTask()
     {
         using (var file = File.Create("Chunks/" + position + ".chunk"))
         {
@@ -144,7 +144,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
 
     [ContextMenu("Load from disk")]
     // Note: Only for use from Unity!
-    void loadFromDisk()
+    private void loadFromDisk()
     {
         //		state = State.GeneratingBlocks;
 
@@ -153,18 +153,16 @@ public class Chunk : MonoBehaviour, IPriorityTask
         terrain.fileTasks.enqueueTask(loadChunkFromDiskTask);
     }
 
-    void loadChunkFromDiskTask()
+    private void loadChunkFromDiskTask()
     {
         //		state = State.GeneratingBlocks;
 
         try
         {
             using (var fs = File.OpenRead("Chunks/" + position + ".chunk"))
+            using (var binaryReader = new BinaryReader(fs))
             {
-                using (var binaryReader = new BinaryReader(fs))
-                {
-                    blocks = GZip.decompress(binaryReader.ReadBytes(size * size * size), size * size * size);
-                }
+                blocks = GZip.decompress(binaryReader.ReadBytes(size * size * size), size * size * size);
             }
 
             //			state = State.HasBlocks;
@@ -282,7 +280,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
 
             return false;
         }
-        else
+
         if (distanceToPlayerSqr < terrain.displayChunkDistanceSqr)
         {
             //			Debug.Log( "Chunk at " + position + " is turning active" );

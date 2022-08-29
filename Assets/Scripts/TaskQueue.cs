@@ -4,9 +4,9 @@ using System;
 
 public class TaskQueue
 {
-    bool running = true;
-    readonly Semaphore tasksCount = new Semaphore(0, int.MaxValue);
-    readonly List<Action> tasks = new List<Action>();
+    private bool running = true;
+    private readonly Semaphore tasksCount = new Semaphore(0, int.MaxValue);
+    private readonly List<Action> tasks = new List<Action>();
 
     public TaskQueue()
     {
@@ -18,7 +18,7 @@ public class TaskQueue
         running = false;
     }
 
-    void backgroundTask()
+    private void backgroundTask()
     {
         Action task;
         while (running)

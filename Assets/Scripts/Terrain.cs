@@ -32,9 +32,9 @@ public class Terrain : MonoBehaviour
     public Chunk chunkPrefab;
 
     public float _displayChunkDistance;
-    float _displayChunkDistanceSqr;
-    float _disableChunkDistanceSqr;
-    float _destroyChunkDistanceSqr;
+    private float _displayChunkDistanceSqr;
+    private float _disableChunkDistanceSqr;
+    private float _destroyChunkDistanceSqr;
 
     public readonly TaskQueue chunkTasks = new TaskQueue();
     public readonly TaskQueue fileTasks = new TaskQueue();
@@ -54,9 +54,9 @@ public class Terrain : MonoBehaviour
         set
         {
             _displayChunkDistance = value;
-            _displayChunkDistanceSqr = _displayChunkDistance * _displayChunkDistance;
-            _disableChunkDistanceSqr = (_displayChunkDistance + chunkSize * 1) * (_displayChunkDistance + chunkSize * 1);
-            _destroyChunkDistanceSqr = (_displayChunkDistance + chunkSize * 2) * (_displayChunkDistance + chunkSize * 2);
+            _displayChunkDistanceSqr = Mathf.Pow(_displayChunkDistance, 2);
+            _disableChunkDistanceSqr = Mathf.Pow(_displayChunkDistance + chunkSize * 1, 2.0f);
+            _destroyChunkDistanceSqr = Mathf.Pow(_displayChunkDistance + chunkSize * 2, 2.0f);
 
             player.GetComponent<Camera>().farClipPlane = value + chunkSize;
         }
@@ -71,7 +71,7 @@ public class Terrain : MonoBehaviour
         return getChunk(coordinate / chunkSize);
     }
 
-    Chunk createChunk(Position3 position)
+    private Chunk createChunk(Position3 position)
     {
         if (isQuitting) return null;
 
@@ -113,7 +113,7 @@ public class Terrain : MonoBehaviour
         Destroy(chunk.gameObject);
     }
 
-    void Start()
+    private void Start()
     {
         if (!Directory.Exists("Chunks")) Directory.CreateDirectory("Chunks");
 
@@ -121,14 +121,14 @@ public class Terrain : MonoBehaviour
     }
 
     [ContextMenu("Print queue sizes")]
-    void printQueueSizes()
+    private void printQueueSizes()
     {
         Debug.Log("chunksNeedingBlocks: " + chunksNeedingBlocks.Count);
         Debug.Log("chunksNeedingMesh: " + chunksNeedingMesh.Count);
         Debug.Log("chunksNeedingCollisionMesh: " + chunksNeedingCollisionMesh.Count);
     }
 
-    void Update()
+    private void Update()
     {
         handleInput();
 
@@ -149,7 +149,7 @@ public class Terrain : MonoBehaviour
         UnityEngine.Profiling.Profiler.EndSample();
     }
 
-    void handleInput()
+    private void handleInput()
     {
         if (Input.GetKeyDown(KeyCode.F1))
         {
@@ -164,7 +164,7 @@ public class Terrain : MonoBehaviour
         }
     }
 
-    void runMainThreadTask()
+    private void runMainThreadTask()
     {
         Action task = null;
 
@@ -180,7 +180,7 @@ public class Terrain : MonoBehaviour
         }
     }
 
-    void runOnePerFrameOnMainThreadTask()
+    private void runOnePerFrameOnMainThreadTask()
     {
         Action task = null;
 
@@ -196,7 +196,7 @@ public class Terrain : MonoBehaviour
         if (task != null) task();
     }
 
-    void OnApplicationQuit()
+    private void OnApplicationQuit()
     {
         isQuitting = true;
         chunkTasks.stop();

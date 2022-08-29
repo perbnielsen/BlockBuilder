@@ -13,9 +13,9 @@ public class MouseLook : MonoBehaviour
     public float sensitivityY = 15f;
     public float minimumY = -60f;
     public float maximumY = 60f;
-    float rotationX = 0f;
+    private float rotationX = 0f;
 
-    void Update()
+    private void Update()
     {
         switch (axes)
         {
