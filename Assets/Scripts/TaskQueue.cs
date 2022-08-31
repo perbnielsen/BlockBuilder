@@ -5,20 +5,20 @@ using System;
 public class TaskQueue
 {
     private bool running = true;
-    private readonly Semaphore tasksCount = new Semaphore(0, int.MaxValue);
-    private readonly List<Action> tasks = new List<Action>();
+    private readonly Semaphore tasksCount = new(0, int.MaxValue);
+    private readonly List<Action> tasks = new();
 
     public TaskQueue()
     {
-        (new Thread(backgroundTask)).Start();
+        new Thread(BackgroundTask).Start();
     }
 
-    public void stop()
+    public void Stop()
     {
         running = false;
     }
 
-    private void backgroundTask()
+    private void BackgroundTask()
     {
         Action task;
         while (running)
@@ -33,7 +33,7 @@ public class TaskQueue
         }
     }
 
-    public void enqueueTask(Action task, bool urgent = false)
+    public void EnqueueTask(Action task, bool urgent = false)
     {
         lock (tasks)
         {

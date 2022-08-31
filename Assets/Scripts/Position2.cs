@@ -2,10 +2,10 @@ using UnityEngine;
 
 public struct Position2
 {
-    public static Position2 right { get { return new Position2(1, 0); } }
-    public static Position2 left { get { return new Position2(-1, 0); } }
-    public static Position2 up { get { return new Position2(0, 1); } }
-    public static Position2 down { get { return new Position2(0, -1); } }
+    public static Position2 Right => new(1, 0);
+    public static Position2 Left => new(-1, 0);
+    public static Position2 Up => new(0, 1);
+    public static Position2 Down => new(0, -1);
 
     public int x, y;
 
@@ -15,50 +15,23 @@ public struct Position2
         this.y = y;
     }
 
-    public static implicit operator Vector2(Position2 position)
-    {
-        return new Vector2(position.x, position.y);
-    }
+    public static implicit operator Vector2(Position2 position) => new(position.x, position.y);
 
-    public static implicit operator Position2(Vector2 position)
-    {
-        return new Position2(Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.y));
-    }
+    public static implicit operator Position2(Vector2 position) => new(Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.y));
 
-    public static Position2 operator +(Position2 positionA, Position2 positionB)
-    {
-        return new Position2(positionA.x + positionB.x, positionA.y + positionB.y);
-    }
+    public static Position2 operator +(Position2 positionA, Position2 positionB) => new(positionA.x + positionB.x, positionA.y + positionB.y);
 
-    public static Position2 operator *(Position2 a, int b)
-    {
-        return new Position2(a.x * b, a.y * b);
-    }
+    public static Position2 operator *(Position2 a, int b) => new(a.x * b, a.y * b);
 
-    public static Position2 operator /(Position2 a, int b)
-    {
-        return new Position2(a.x / b, a.y / b);
-    }
+    public static Position2 operator /(Position2 a, int b) => new(a.x / b, a.y / b);
 
-    public static Position2 operator %(Position2 a, int b)
-    {
-        return new Position2(a.x % b, a.y % b);
-    }
+    public static Position2 operator %(Position2 a, int b) => new(a.x % b, a.y % b);
 
-    public static bool operator !=(Position2 a, Position2 b)
-    {
-        return !(a == b);
-    }
+    public static bool operator !=(Position2 a, Position2 b) => !(a == b);
 
-    public static bool operator ==(Position2 a, Position2 b)
-    {
-        return (a.x == b.x && a.y == b.y);
-    }
+    public static bool operator ==(Position2 a, Position2 b) => a.x == b.x && a.y == b.y;
 
-    public override bool Equals(System.Object obj)
-    {
-        return ((obj is Position2) && (this == (Position2)obj));
-    }
+    public override bool Equals(object obj) => (obj is Position2 position) && (this == position);
 
     public override string ToString()
     {

@@ -3,13 +3,13 @@ using System;
 
 public struct Position3 : IComparable<Position3>
 {
-    public static Position3 right { get { return new Position3(1, 0, 0); } }
-    public static Position3 left { get { return new Position3(-1, 0, 0); } }
-    public static Position3 up { get { return new Position3(0, 1, 0); } }
-    public static Position3 down { get { return new Position3(0, -1, 0); } }
-    public static Position3 forward { get { return new Position3(0, 0, 1); } }
-    public static Position3 back { get { return new Position3(0, 0, -1); } }
-    public static Position3 zero { get { return new Position3(0, 0, 0); } }
+    public static Position3 Right => new(1, 0, 0);
+    public static Position3 Left => new(-1, 0, 0);
+    public static Position3 Up => new(0, 1, 0);
+    public static Position3 Down => new(0, -1, 0);
+    public static Position3 Forward => new(0, 0, 1);
+    public static Position3 Back => new(0, 0, -1);
+    public static Position3 Zero => new(0, 0, 0);
 
     public readonly int x;
     public readonly int y;
@@ -27,55 +27,27 @@ public struct Position3 : IComparable<Position3>
         return new Vector3(position.x, position.y, position.z);
     }
 
-    public static implicit operator Position3(Vector3 position)
-    {
-        return new Position3(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y), Mathf.FloorToInt(position.z));
-        //		return new Position3( Mathf.RoundToInt( position.x ), Mathf.RoundToInt( position.y ), Mathf.RoundToInt( position.z ) );
-    }
+    public static implicit operator Position3(Vector3 position) => new(Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y), Mathf.FloorToInt(position.z));
 
-    public static Position3 operator +(Position3 positionA, Position3 positionB)
-    {
-        return new Position3(positionA.x + positionB.x, positionA.y + positionB.y, positionA.z + positionB.z);
-    }
+    public static Position3 operator +(Position3 positionA, Position3 positionB) => new(positionA.x + positionB.x, positionA.y + positionB.y, positionA.z + positionB.z);
 
-    public static Position3 operator -(Position3 positionA, Position3 positionB)
-    {
-        return new Position3(positionA.x - positionB.x, positionA.y - positionB.y, positionA.z - positionB.z);
-    }
+    public static Position3 operator -(Position3 positionA, Position3 positionB) => new(positionA.x - positionB.x, positionA.y - positionB.y, positionA.z - positionB.z);
 
-    public static Position3 operator *(int b, Position3 a)
-    {
-        return new Position3(a.x * b, a.y * b, a.z * b);
-    }
+    public static Position3 operator *(int b, Position3 a) => new(a.x * b, a.y * b, a.z * b);
 
-    public static Position3 operator *(Position3 a, int b)
-    {
-        return new Position3(a.x * b, a.y * b, a.z * b);
-    }
+    public static Position3 operator *(Position3 a, int b) => new(a.x * b, a.y * b, a.z * b);
 
-    public static Position3 operator /(Position3 a, int b)
-    {
-        return new Position3(a.x / b, a.y / b, a.z / b);
-    }
+    public static Position3 operator /(Position3 a, int b) => new(a.x / b, a.y / b, a.z / b);
 
-    public static Position3 operator %(Position3 a, int b)
-    {
-        return new Position3(a.x % b, a.y % b, a.z % b);
-    }
+    public static Position3 operator %(Position3 a, int b) => new(a.x % b, a.y % b, a.z % b);
 
-    public static bool operator !=(Position3 a, Position3 b)
-    {
-        return !(a == b);
-    }
+    public static bool operator !=(Position3 a, Position3 b) => !(a == b);
 
-    public static bool operator ==(Position3 a, Position3 b)
-    {
-        return (a.x == b.x && a.y == b.y && a.z == b.z);
-    }
+    public static bool operator ==(Position3 a, Position3 b) => a.x == b.x && a.y == b.y && a.z == b.z;
 
-    public override bool Equals(System.Object obj)
+    public override bool Equals(object obj)
     {
-        return ((obj is Position3) && (this == (Position3)obj));
+        return (obj is Position3 position) && (this == position);
     }
 
     int IComparable<Position3>.CompareTo(Position3 position)
@@ -101,7 +73,7 @@ public struct Position3 : IComparable<Position3>
         return x * 197 + y * 211 + z * 227;
     }
 
-    public int sqrMagnitude { get { return x * x + y * y + z * z; } }
+    public int SqrMagnitude => x * x + y * y + z * z;
 
-    public float magnitude { get { return Mathf.Sqrt(magnitude); } }
+    public float Magnitude => Mathf.Sqrt(Magnitude);
 }

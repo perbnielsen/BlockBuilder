@@ -22,8 +22,8 @@ updateBlocks()
 
 public class Terrain : MonoBehaviour
 {
-    public readonly List<Action> runOnMainThread = new List<Action>();
-    public readonly List<Action> runOnePerFrameOnMainThread = new List<Action>();
+    public readonly List<Action> runOnMainThread = new();
+    public readonly List<Action> runOnePerFrameOnMainThread = new();
 
     public bool isQuitting;
     public Player player;
@@ -32,46 +32,42 @@ public class Terrain : MonoBehaviour
     public Chunk chunkPrefab;
 
     public float _displayChunkDistance;
-    private float _displayChunkDistanceSqr;
-    private float _disableChunkDistanceSqr;
-    private float _destroyChunkDistanceSqr;
+    public readonly TaskQueue chunkTasks = new();
+    public readonly TaskQueue fileTasks = new();
 
-    public readonly TaskQueue chunkTasks = new TaskQueue();
-    public readonly TaskQueue fileTasks = new TaskQueue();
+    readonly Dictionary<Position3, Chunk> chunks = new();
 
-    readonly Dictionary<Position3, Chunk> chunks = new Dictionary<Position3, Chunk>();
+    public readonly List<Chunk> activeChunks = new();
+    public readonly List<Chunk> inactiveChunks = new();
 
-    public readonly List<Chunk> activeChunks = new List<Chunk>();
-    public readonly List<Chunk> inactiveChunks = new List<Chunk>();
+    public readonly PrioryTaskQueue<Chunk> chunksNeedingBlocks = new("blocks", chunk => chunk.PopulateBlocks(), threadCount: 5);
+    public readonly PrioryTaskQueue<Chunk> chunksNeedingMesh = new("mesh", chunk => chunk.BuildMesh(), threadCount: 5);
+    public readonly PrioryTaskQueue<Chunk> chunksNeedingCollisionMesh = new("collision mesh", chunk => chunk.BuildCollisionMesh(), threadCount: 5);
 
-    public readonly PrioryTaskQueue<Chunk> chunksNeedingBlocks = new PrioryTaskQueue<Chunk>("blocks", chunk => chunk.populateBlocks(), 1);
-    public readonly PrioryTaskQueue<Chunk> chunksNeedingMesh = new PrioryTaskQueue<Chunk>("mesh", chunk => chunk.buildMesh(), 1);
-    public readonly PrioryTaskQueue<Chunk> chunksNeedingCollisionMesh = new PrioryTaskQueue<Chunk>("collision mesh", chunk => chunk.buildCollisionMesh(), 1);
-
-    public float displayChunkDistance
+    public float DisplayChunkDistance
     {
         get { return _displayChunkDistance; }
         set
         {
             _displayChunkDistance = value;
-            _displayChunkDistanceSqr = Mathf.Pow(_displayChunkDistance, 2);
-            _disableChunkDistanceSqr = Mathf.Pow(_displayChunkDistance + chunkSize * 1, 2.0f);
-            _destroyChunkDistanceSqr = Mathf.Pow(_displayChunkDistance + chunkSize * 2, 2.0f);
+            DisplayChunkDistanceSqr = Mathf.Pow(_displayChunkDistance, 2);
+            DisableChunkDistanceSqr = Mathf.Pow(_displayChunkDistance + chunkSize * 1, 2.0f);
+            DestroyChunkDistanceSqr = Mathf.Pow(_displayChunkDistance + chunkSize * 2, 2.0f);
 
             player.GetComponent<Camera>().farClipPlane = value + chunkSize;
         }
     }
 
-    public float displayChunkDistanceSqr { get { return _displayChunkDistanceSqr; } }
-    public float disableChunkDistanceSqr { get { return _disableChunkDistanceSqr; } }
-    public float destroyChunkDistanceSqr { get { return _destroyChunkDistanceSqr; } }
+    public float DisplayChunkDistanceSqr { get; private set; }
+    public float DisableChunkDistanceSqr { get; private set; }
+    public float DestroyChunkDistanceSqr { get; private set; }
 
-    public Chunk getChunkAtCoordiate(Vector3 coordinate)
+    public Chunk GetChunkAtCoordiate(Vector3 coordinate)
     {
-        return getChunk(coordinate / chunkSize);
+        return GetChunk(coordinate / chunkSize);
     }
 
-    private Chunk createChunk(Position3 position)
+    private Chunk CreateChunk(Position3 position)
     {
         if (isQuitting) return null;
 
@@ -89,98 +85,96 @@ public class Terrain : MonoBehaviour
 
         chunks.Add(position, chunk);
 
-        chunksNeedingBlocks.enqueueTask(chunk);
+        chunksNeedingBlocks.EnqueueTask(chunk);
 
         return chunk;
     }
 
-    public Chunk getChunk(Position3 position, bool createIfNonexistent = true)
+    public Chunk GetChunk(Position3 position, bool createIfNonexistent = true)
     {
         // Note: Returns the chunk at position (in chunks). If the chunk does not exist,
         // and createIfNonexistent is true, it will be created and returned.
         if (!chunks.ContainsKey(position))
         {
-            return createIfNonexistent ? createChunk(position) : null;
+            return createIfNonexistent ? CreateChunk(position) : null;
         }
 
         return chunks[position];
     }
 
-    public void deleteChunk(Chunk chunk)
+    public void DeleteChunk(Chunk chunk)
     {
         chunks.Remove(chunk.position);
 
         Destroy(chunk.gameObject);
     }
 
-    private void Start()
+    public void Start()
     {
         if (!Directory.Exists("Chunks")) Directory.CreateDirectory("Chunks");
 
-        displayChunkDistance = _displayChunkDistance;
+        DisplayChunkDistance = _displayChunkDistance;
     }
 
     [ContextMenu("Print queue sizes")]
-    private void printQueueSizes()
+    public void PrintQueueSizes()
     {
         Debug.Log("chunksNeedingBlocks: " + chunksNeedingBlocks.Count);
         Debug.Log("chunksNeedingMesh: " + chunksNeedingMesh.Count);
         Debug.Log("chunksNeedingCollisionMesh: " + chunksNeedingCollisionMesh.Count);
     }
 
-    private void Update()
+    public void Update()
     {
-        handleInput();
+        HandleInput();
 
         //		Profiler.BeginSample( "1" );
-        chunksNeedingBlocks.reprioritise();
-        chunksNeedingMesh.reprioritise();
-        chunksNeedingCollisionMesh.reprioritise();
+        chunksNeedingBlocks.Reprioritise();
+        chunksNeedingMesh.Reprioritise();
+        chunksNeedingCollisionMesh.Reprioritise();
         //		Profiler.EndSample();
 
         UnityEngine.Profiling.Profiler.BeginSample("2");
-        runMainThreadTask();
-        runOnePerFrameOnMainThreadTask();
+        RunMainThreadTask();
+        RunOnePerFrameOnMainThreadTask();
         UnityEngine.Profiling.Profiler.EndSample();
 
         UnityEngine.Profiling.Profiler.BeginSample("3");
-        activeChunks.RemoveAll(chunk => !chunk.checkIfStillActive());
-        inactiveChunks.RemoveAll(chunk => !chunk.checkIfStillInactive());
+        activeChunks.RemoveAll(chunk => !chunk.CheckIfStillActive());
+        inactiveChunks.RemoveAll(chunk => !chunk.CheckIfStillInactive());
         UnityEngine.Profiling.Profiler.EndSample();
     }
 
-    private void handleInput()
+    private void HandleInput()
     {
         if (Input.GetKeyDown(KeyCode.F1))
         {
-            displayChunkDistance = Mathf.Max(chunkSize, displayChunkDistance - 8);
-            Debug.Log("displayChunkDistance: " + displayChunkDistance);
+            DisplayChunkDistance = Mathf.Max(chunkSize, DisplayChunkDistance - 8);
+            Debug.Log("displayChunkDistance: " + DisplayChunkDistance);
         }
 
         if (Input.GetKeyDown(KeyCode.F2))
         {
-            displayChunkDistance += 8;
-            Debug.Log("displayChunkDistance: " + displayChunkDistance);
+            DisplayChunkDistance += 8;
+            Debug.Log("displayChunkDistance: " + DisplayChunkDistance);
         }
     }
 
-    private void runMainThreadTask()
+    private void RunMainThreadTask()
     {
-        Action task = null;
-
         lock (runOnMainThread)
         {
             while (runOnMainThread.Count > 0)
             {
-                task = runOnMainThread[0];
+                Action task = runOnMainThread[0];
                 runOnMainThread.RemoveAt(0);
 
-                if (task != null) task();
+                task?.Invoke();
             }
         }
     }
 
-    private void runOnePerFrameOnMainThreadTask()
+    private void RunOnePerFrameOnMainThreadTask()
     {
         Action task = null;
 
@@ -193,17 +187,17 @@ public class Terrain : MonoBehaviour
             }
         }
 
-        if (task != null) task();
+        task?.Invoke();
     }
 
-    private void OnApplicationQuit()
+    public void OnApplicationQuit()
     {
         isQuitting = true;
-        chunkTasks.stop();
-        fileTasks.stop();
+        chunkTasks.Stop();
+        fileTasks.Stop();
 
-        chunksNeedingBlocks.stop();
-        chunksNeedingMesh.stop();
-        chunksNeedingCollisionMesh.stop();
+        chunksNeedingBlocks.Stop();
+        chunksNeedingMesh.Stop();
+        chunksNeedingCollisionMesh.Stop();
     }
 }

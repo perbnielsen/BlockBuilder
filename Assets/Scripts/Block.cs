@@ -9,7 +9,7 @@ public class Block : MonoBehaviour
         undefined = 255
     }
 
-    public static bool isTransparent(Block.Type block)
+    public static bool IsTransparent(Block.Type block)
     {
         return (block == Type.none);
     }

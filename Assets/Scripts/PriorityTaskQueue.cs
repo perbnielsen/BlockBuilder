@@ -1,45 +1,48 @@
 ﻿using System;
 using System.Threading;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public interface IPriorityTask
 {
-    float getPriority();
+    float GetPriority();
 }
 
 public class PrioryTaskQueue<T> where T : class, IPriorityTask
 {
-    bool running = true;
-    readonly Semaphore tasksCount = new Semaphore(0, int.MaxValue);
-    readonly List<T> tasks = new List<T>();
-    public Action<T> action;
+    private bool running = true;
+    private readonly Semaphore tasksCount = new(0, int.MaxValue);
+    private readonly List<T> tasks = new();
+    private readonly Action<T> action;
+
     public string name;
 
     public PrioryTaskQueue(string name, Action<T> action, uint threadCount = 1)
     {
         this.name = name;
         this.action = action;
+
         while (threadCount-- > 0)
         {
-            (new Thread(backgroundTask)).Start();
+            new Thread(BackgroundTask).Start();
         }
     }
 
-    public void stop()
+    public void Stop()
     {
         running = false;
     }
 
-    public void reprioritise()
+    public void Reprioritise()
     {
         lock (tasks)
         {
-            tasks.Sort((a, b) => b.getPriority().CompareTo(a.getPriority()));
+            tasks.Sort((a, b) => b.GetPriority().CompareTo(a.GetPriority()));
         }
     }
 
-    void backgroundTask()
+    private void BackgroundTask()
     {
         T item;
         uint i = 0;
@@ -63,41 +66,38 @@ public class PrioryTaskQueue<T> where T : class, IPriorityTask
         }
     }
 
-    public void enqueueTask(T newTask)
+    public void EnqueueTask(T newTask)
     {
         lock (tasks)
         {
-            if (!tasks.Contains(newTask))
+            if (tasks.Contains(newTask))
             {
-                tasks.Add(newTask);
-                tasksCount.Release();
+                return;
             }
+
+            tasks.Add(newTask);
+            tasksCount.Release();
         }
     }
 
-    public void enqueueTasks(List<T> newTasks)
+    public void EnqueueTasks(List<T> newTasks)
     {
         lock (tasks)
         {
-            while (newTasks.Count > 0)
-            {
-                if (!tasks.Contains(newTasks[0]))
-                {
-                    tasks.Add(newTasks[0]);
-                    tasksCount.Release();
-                }
-                newTasks.RemoveAt(0);
-            }
-            //			tasks.AddRange( newTasks );
+            var newDistinctTasks = newTasks.Except(tasks).ToList();
+            tasks.AddRange(newDistinctTasks);
+            tasksCount.Release(newDistinctTasks.Count);
         }
-        //		tasksCount.Release( newTasks.Count );
     }
 
-    public void dequeueTask(T task)
+    public void DequeueTask(T task)
     {
         lock (tasks)
         {
-            while (tasks.Remove(task)) tasksCount.WaitOne();
+            if (tasks.Remove(task))
+            {
+                tasksCount.WaitOne();
+            }
         }
     }
 

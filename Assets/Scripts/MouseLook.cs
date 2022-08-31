@@ -15,7 +15,7 @@ public class MouseLook : MonoBehaviour
     public float maximumY = 60f;
     private float rotationX = 0f;
 
-    private void Update()
+    public void Update()
     {
         switch (axes)
         {
