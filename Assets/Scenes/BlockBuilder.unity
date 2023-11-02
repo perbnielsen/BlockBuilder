@@ -172,7 +172,7 @@ MonoBehaviour:
   seed: 0
   chunkSize: 32
   chunkPrefab: {fileID: 11400000, guid: 593ee089cdb3540b1a217913c94ad1f1, type: 3}
-  _displayChunkDistance: 1024
+  _displayChunkDistance: 256
 --- !u!1 &354730893
 GameObject:
   m_ObjectHideFlags: 0
@@ -425,8 +425,8 @@ MonoBehaviour:
   terrain: {fileID: 18677218}
   jumpKey: 32
   jumpForce: 7
-  speed: 20
-  gravity: 20
+  speed: 200
+  gravity: 0
   maxSpeed: 200
   characterController: {fileID: 354730894}
   chunk: {fileID: 0}

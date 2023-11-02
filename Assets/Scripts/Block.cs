@@ -11,6 +11,6 @@ public class Block : MonoBehaviour
 
     public static bool IsTransparent(Block.Type block)
     {
-        return (block == Type.none);
+        return block == Type.none;
     }
 }

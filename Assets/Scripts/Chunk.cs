@@ -353,7 +353,7 @@ public class Chunk : MonoBehaviour, IPriorityTask
             return;
         }
 
-        //		destrsoyMesh();
+        //		DestroyMesh();
         state |= State.HasMesh;
 
         if (triangles.Length == 0)
@@ -458,37 +458,37 @@ public class Chunk : MonoBehaviour, IPriorityTask
 
     public void InformNeighboursOfBlockGeneration()
     {
-        if (NeighbourRight = terrain.GetChunk(position + Position3.Right, createIfNonexistent: false))
+        if (NeighbourRight = terrain.GetChunk(position + Position3.Right, createIfNonExistent: false))
         {
             NeighbourRight.NeighbourLeft = this;
             NeighbourRight.NeighbourBlocksHaveChanged();
         }
 
-        if (NeighbourLeft = terrain.GetChunk(position + Position3.Left, createIfNonexistent: false))
+        if (NeighbourLeft = terrain.GetChunk(position + Position3.Left, createIfNonExistent: false))
         {
             NeighbourLeft.NeighbourRight = this;
             NeighbourLeft.NeighbourBlocksHaveChanged();
         }
 
-        if (NeighbourUp = terrain.GetChunk(position + Position3.Up, createIfNonexistent: false))
+        if (NeighbourUp = terrain.GetChunk(position + Position3.Up, createIfNonExistent: false))
         {
             NeighbourUp.NeighbourDown = this;
             NeighbourUp.NeighbourBlocksHaveChanged();
         }
 
-        if (NeighbourDown = terrain.GetChunk(position + Position3.Down, createIfNonexistent: false))
+        if (NeighbourDown = terrain.GetChunk(position + Position3.Down, createIfNonExistent: false))
         {
             NeighbourDown.NeighbourUp = this;
             NeighbourDown.NeighbourBlocksHaveChanged();
         }
 
-        if (NeighbourForward = terrain.GetChunk(position + Position3.Forward, createIfNonexistent: false))
+        if (NeighbourForward = terrain.GetChunk(position + Position3.Forward, createIfNonExistent: false))
         {
             NeighbourForward.NeighbourBack = this;
             NeighbourForward.NeighbourBlocksHaveChanged();
         }
 
-        if (NeighbourBack = terrain.GetChunk(position + Position3.Back, createIfNonexistent: false))
+        if (NeighbourBack = terrain.GetChunk(position + Position3.Back, createIfNonExistent: false))
         {
             NeighbourBack.NeighbourForward = this;
             NeighbourBack.NeighbourBlocksHaveChanged();

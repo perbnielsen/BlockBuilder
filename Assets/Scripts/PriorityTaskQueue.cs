@@ -34,7 +34,7 @@ public class PrioryTaskQueue<T> where T : class, IPriorityTask
         running = false;
     }
 
-    public void Reprioritise()
+    public void Prioritise()
     {
         lock (tasks)
         {

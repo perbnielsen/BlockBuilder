@@ -62,7 +62,7 @@ public class Terrain : MonoBehaviour
     public float DisableChunkDistanceSqr { get; private set; }
     public float DestroyChunkDistanceSqr { get; private set; }
 
-    public Chunk GetChunkAtCoordiate(Vector3 coordinate)
+    public Chunk GetChunkAtCoordinate(Vector3 coordinate)
     {
         return GetChunk(coordinate / chunkSize);
     }
@@ -90,13 +90,13 @@ public class Terrain : MonoBehaviour
         return chunk;
     }
 
-    public Chunk GetChunk(Position3 position, bool createIfNonexistent = true)
+    public Chunk GetChunk(Position3 position, bool createIfNonExistent = true)
     {
         // Note: Returns the chunk at position (in chunks). If the chunk does not exist,
-        // and createIfNonexistent is true, it will be created and returned.
+        // and createIfNonExistent is true, it will be created and returned.
         if (!chunks.ContainsKey(position))
         {
-            return createIfNonexistent ? CreateChunk(position) : null;
+            return createIfNonExistent ? CreateChunk(position) : null;
         }
 
         return chunks[position];
@@ -129,9 +129,9 @@ public class Terrain : MonoBehaviour
         HandleInput();
 
         //		Profiler.BeginSample( "1" );
-        chunksNeedingBlocks.Reprioritise();
-        chunksNeedingMesh.Reprioritise();
-        chunksNeedingCollisionMesh.Reprioritise();
+        chunksNeedingBlocks.Prioritise();
+        chunksNeedingMesh.Prioritise();
+        chunksNeedingCollisionMesh.Prioritise();
         //		Profiler.EndSample();
 
         UnityEngine.Profiling.Profiler.BeginSample("2");

@@ -1,7 +1,7 @@
 using UnityEngine;
 using System;
 
-public struct Position3 : IComparable<Position3>
+public readonly struct Position3 : IComparable<Position3>
 {
     public static Position3 Right => new(1, 0, 0);
     public static Position3 Left => new(-1, 0, 0);
